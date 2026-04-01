@@ -79,55 +79,18 @@ interface TranscriptMessage {
 }
 
 // Generate mock transcript data for a task
+import transcriptData from '@/lib/transcripts.json';
+
 function generateMockTranscript(task: Task): TranscriptMessage[] {
-  const turns = task.dialogueturns ?? 4;
-  const messages: TranscriptMessage[] = [];
-  const baseTime = new Date();
-  baseTime.setMinutes(baseTime.getMinutes() - turns * 2);
-
-  const humanMessages = [
-    "Hello, I need help with my account settings.",
-    "Can you show me where to find the billing section?",
-    "I'd like to update my payment method.",
-    "Also, can you confirm my subscription tier?",
-    "Perfect, that's all I needed.",
-    "One more thing - how do I enable notifications?",
-    "Thanks for your help!",
-  ];
-
-  const aiMessages = [
-    "Hello! Welcome to our support service. I'm here to help you with your account. What would you like to do today?",
-    "Of course! You can find the billing section by going to Settings > Account > Billing & Payments. Would you like me to walk you through it?",
-    "Absolutely! To update your payment method, click on 'Payment Methods' and then 'Add New Card'. You can also remove existing methods from there.",
-    "Your current subscription is the Professional tier, which includes unlimited access to all features and priority support.",
-    "You're welcome! Don't hesitate to reach out if you have any other questions.",
-    "For notifications, go to Settings > Preferences > Notifications. You can customize email, push, and SMS alerts there.",
-    "My pleasure! Have a great day!",
-  ];
-
-  for (let i = 0; i < turns; i++) {
-    const humanTime = new Date(baseTime.getTime() + i * 120000);
-    const aiTime = new Date(humanTime.getTime() + Math.random() * 3000 + 500);
-
-    // Human message
-    messages.push({
-      id: `${task.id}-human-${i}`,
-      role: 'human',
-      content: humanMessages[i % humanMessages.length],
-      timestamp: humanTime.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
-    });
-
-    // AI response
-    messages.push({
-      id: `${task.id}-ai-${i}`,
-      role: 'ai',
-      content: aiMessages[i % aiMessages.length],
-      timestamp: aiTime.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
-      latencyMs: Math.floor((aiTime.getTime() - humanTime.getTime())),
-    });
+  // If we have parsed JSON transcripts, look for matching task ID
+  const matches = transcriptData.filter((msg: any) => msg.taskId === task.id);
+  
+  if (matches.length > 0) {
+    return matches as TranscriptMessage[];
   }
-
-  return messages;
+  
+  // Return an empty array or fallback mock data if no Excel data is present
+  return [];
 }
 
 interface TaskDetailsProps {
