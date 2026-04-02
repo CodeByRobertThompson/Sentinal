@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Search, ChevronDown, ChevronRight, ChevronUp, RefreshCw, ChevronsUpDown, CheckCircle2, XCircle, Clock } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -219,22 +219,27 @@ export function TaskSummaryTable({ tasks, isLoading, onRefresh, isRefreshing }: 
     localStorage.setItem('sentinal-sort-config', JSON.stringify(sortConfig));
   }, [searchQuery, statusFilter, sortConfig]);
 
-  let filteredTasks = tasks.filter((task: Task) =>
-    task.taskname.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredTasks = useMemo(() => {
+    const query = searchQuery.toLowerCase();
+    let result = tasks.filter((task: Task) =>
+      task.taskname.toLowerCase().includes(query)
+    );
 
-  if (statusFilter !== 'all') {
-    filteredTasks = filteredTasks.filter(task => task.statusKey === statusFilter);
-  }
+    if (statusFilter !== 'all') {
+      result = result.filter(task => task.statusKey === statusFilter);
+    }
 
-  if (sortConfig.key === 'advlatencys') {
-    filteredTasks.sort((a, b) => {
-      const valA = a.advlatencys ?? 0;
-      const valB = b.advlatencys ?? 0;
-      if (sortConfig.direction === 'asc') return valA - valB;
-      return valB - valA;
-    });
-  }
+    if (sortConfig.key === 'advlatencys') {
+      result.sort((a, b) => {
+        const valA = a.advlatencys ?? 0;
+        const valB = b.advlatencys ?? 0;
+        if (sortConfig.direction === 'asc') return valA - valB;
+        return valB - valA;
+      });
+    }
+
+    return result;
+  }, [tasks, searchQuery, statusFilter, sortConfig]);
 
   const toggleRow = (id: string) => {
     const newExpanded = new Set(expandedRows);
