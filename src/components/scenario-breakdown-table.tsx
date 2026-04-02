@@ -154,6 +154,14 @@ function NestedRunsTable({ scenario }: NestedRunsTableProps) {
 
 export function ScenarioBreakdownTable({ scenarios, isLoading }: ScenarioBreakdownTableProps) {
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 20;
+
+  const totalPages = Math.ceil(scenarios.length / pageSize);
+  const currentScenarios = React.useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    return scenarios.slice(start, start + pageSize);
+  }, [scenarios, currentPage, pageSize]);
 
   const toggleRow = (id: string) => {
     const newExpanded = new Set(expandedRows);
@@ -200,14 +208,14 @@ export function ScenarioBreakdownTable({ scenarios, isLoading }: ScenarioBreakdo
                       <TableCell className="print:hidden px-6 text-right"><Skeleton className="h-9 w-24 ml-auto" /></TableCell>
                     </TableRow>
                   ))
-                ) : scenarios.length === 0 ? (
+                ) : currentScenarios.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
-                      No scenario data available
-                    </TableCell>
+                     <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                       No scenario data available
+                     </TableCell>
                   </TableRow>
                 ) : (
-                  scenarios.map((scenario: Scenario, index: number) => (
+                  currentScenarios.map((scenario: Scenario, index: number) => (
                     <React.Fragment key={scenario.id}>
                       <TableRow className={`hover:bg-muted/30 transition-colors ${index % 2 === 0 ? 'bg-white dark:bg-background/50' : 'bg-[oklch(0.98_0.003_250)] dark:bg-muted/20'}`}>
                         <TableCell className="px-6 py-4 font-medium">{scenario.scenarioname}</TableCell>
@@ -253,6 +261,34 @@ export function ScenarioBreakdownTable({ scenarios, isLoading }: ScenarioBreakdo
               </TableBody>
             </Table>
           </div>
+          {/* Pagination Controls */}
+          {totalPages > 1 && (
+            <div className="flex items-center justify-between px-6 py-4 border-t border-border bg-white dark:bg-card">
+              <span className="text-sm text-muted-foreground font-medium">
+                Showing {((currentPage - 1) * pageSize) + 1} to {Math.min(currentPage * pageSize, scenarios.length)} of {scenarios.length} entries
+              </span>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                  disabled={currentPage === 1}
+                  className="bg-transparent dark:border-border"
+                >
+                  Previous
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                  disabled={currentPage === totalPages}
+                  className="bg-transparent dark:border-border"
+                >
+                  Next
+                </Button>
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
     </motion.div>

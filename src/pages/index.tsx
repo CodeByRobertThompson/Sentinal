@@ -9,8 +9,7 @@ import { QualitySnapshotCards } from '@/components/quality-snapshot-cards';
 import { ScenarioBreakdownTable } from '@/components/scenario-breakdown-table';
 import { TaskSummaryTable } from '@/components/task-summary-table';
 import { ThemeToggle } from '@/components/theme-toggle';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { Download, FileText, FileSpreadsheet } from 'lucide-react';
+import { FileText } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 const headerVariants = {
@@ -49,54 +48,7 @@ export default function HomePage() {
     setIsRefreshing(false);
   };
 
-  const handleExportPDF = () => {
-    window.print();
-  };
 
-  const handleExportCSV = () => {
-    if (!tasks || !scenarios) return;
-    
-    const headers = ["Type", "Name", "Key Metric 1", "Key Metric 2", "Status"];
-    const rows: string[][] = [];
-    
-    // Add Scenarios
-    scenarios.forEach(s => {
-      rows.push([
-        "Scenario", 
-        s.scenarioname ?? "Unknown", 
-        `Total Runs: ${s.totaltests ?? 0}`, 
-        `Pass Rate: ${(s.passratepercent ?? 0).toFixed(1)}%`, 
-        (s.passratepercent ?? 0) >= 90 ? "Pass" : "Fail"
-      ]);
-    });
-
-    // Add Tasks
-    tasks.forEach(t => {
-      let statusStr = "Unknown";
-      if (t.statusKey === "StatusKey0") statusStr = "Passed";
-      else if (t.statusKey === "StatusKey1") statusStr = "Failed";
-      else if (t.statusKey === "StatusKey2") statusStr = "In Progress";
-      
-      rows.push([
-        "Task", 
-        t.taskname ?? "Unknown", 
-        `Dialogue Turns: ${t.dialogueturns ?? 0}`, 
-        `Avg Latency: ${(t.advlatencys ?? 0).toFixed(2)}s`, 
-        statusStr
-      ]);
-    });
-
-    const csvContent = "data:text/csv;charset=utf-8," 
-        + [headers.join(","), ...rows.map(e => e.map(cell => `"${(cell || '').toString().replace(/"/g, '""')}"`).join(","))].join("\n");
-
-    const encodedUri = encodeURI(csvContent);
-    const link = document.createElement("a");
-    link.setAttribute("href", encodedUri);
-    link.setAttribute("download", `test_report_${new Date().toISOString().split('T')[0]}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -117,42 +69,30 @@ export default function HomePage() {
             {/* Center: Title */}
             <div className="absolute left-1/2 transform -translate-x-1/2">
               <h1 className="text-xl font-bold text-emerald tracking-tight whitespace-nowrap">
-                Agentic Chat Test Report
+                Agent Intelligence Overview
               </h1>
             </div>
 
-            {/* Right: Refresh Button & Last Synced */}
-            <div className="flex items-center gap-4">
-              <span className="text-xs text-muted-foreground whitespace-nowrap hidden sm:inline">
-                Last Synced: {lastSynced ? formatTimestamp(lastSynced) : '--:--:--'}
-              </span>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="outline" size="sm" className="hidden sm:flex dark:border-border">
-                    <Download className="h-4 w-4 mr-2" />
-                    Export
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-40">
-                  <DropdownMenuItem onClick={handleExportPDF} className="cursor-pointer">
-                    <FileText className="h-4 w-4 mr-2" />
-                    PDF Report
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={handleExportCSV} className="cursor-pointer">
-                    <FileSpreadsheet className="h-4 w-4 mr-2" />
-                    CSV Data
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-              <ThemeToggle />
-              <Button
-                onClick={handleRefresh}
-                disabled={isRefreshing}
-                className="bg-slate-blue hover:bg-slate-blue/90 text-white"
-              >
-                <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
-                Refresh
+            {/* Right: Actions */}
+            <div className="flex items-center gap-3">
+              <Button variant="outline" size="sm" onClick={() => window.print()} className="hidden sm:flex dark:border-border">
+                <FileText className="h-4 w-4 mr-2" />
+                Export PDF
               </Button>
+              <ThemeToggle />
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-muted-foreground whitespace-nowrap hidden sm:inline">
+                  Last Synced: {lastSynced ? formatTimestamp(lastSynced) : '--:--:--'}
+                </span>
+                <Button
+                  onClick={handleRefresh}
+                  disabled={isRefreshing}
+                  className="bg-slate-blue hover:bg-slate-blue/90 text-white"
+                >
+                  <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
+                  Refresh
+                </Button>
+              </div>
             </div>
           </div>
         </div>
