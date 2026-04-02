@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Search, ChevronDown, ChevronRight, ChevronUp, RefreshCw, ChevronsUpDown, CheckCircle2, XCircle, Clock, Play } from 'lucide-react';
+import { Search, ChevronDown, ChevronRight, ChevronUp, RefreshCw, ChevronsUpDown, CheckCircle2, XCircle, Clock } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
