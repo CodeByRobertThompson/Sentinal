@@ -100,25 +100,25 @@ function NestedRunsTable({ scenario }: NestedRunsTableProps) {
       transition={{ duration: 0.3, ease: 'easeOut' as const }}
       className="overflow-hidden"
     >
-      <div className="px-8 py-4 bg-[oklch(0.97_0.005_250)] border-t border-border">
-        <div className="rounded-lg border border-border overflow-hidden bg-white">
+      <div className="px-8 py-4 bg-[oklch(0.97_0.005_250)] dark:bg-muted/20 border-t border-border">
+        <div className="rounded-lg border border-border overflow-hidden bg-white dark:bg-background/50">
           <Table>
             <TableHeader>
-              <TableRow className="bg-[oklch(0.96_0.008_250)] hover:bg-[oklch(0.96_0.008_250)]">
+              <TableRow className="bg-[oklch(0.96_0.008_250)] dark:bg-muted/40 hover:bg-[oklch(0.96_0.008_250)] dark:hover:bg-muted/40">
                 <TableHead className="font-semibold text-emerald py-3 px-4 text-sm">Run #</TableHead>
                 <TableHead className="font-semibold text-emerald py-3 text-sm">Started At</TableHead>
                 <TableHead className="font-semibold text-emerald py-3 text-sm">Duration</TableHead>
                 <TableHead className="font-semibold text-emerald py-3 text-center text-sm">Passed</TableHead>
                 <TableHead className="font-semibold text-emerald py-3 text-center text-sm">Failed</TableHead>
                 <TableHead className="font-semibold text-emerald py-3 text-center text-sm">Status</TableHead>
-                <TableHead className="font-semibold text-emerald py-3 px-4 text-right text-sm">Actions</TableHead>
+                <TableHead className="print:hidden font-semibold text-emerald py-3 px-4 text-right text-sm">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {runs.map((run: ScenarioRun, index: number) => (
                 <TableRow 
                   key={run.id} 
-                  className={`border-b border-border/50 hover:bg-muted/30 transition-colors ${index % 2 === 0 ? 'bg-white' : 'bg-[oklch(0.99_0.002_250)]'}`}
+                  className={`border-b border-border/50 hover:bg-muted/30 transition-colors ${index % 2 === 0 ? 'bg-white dark:bg-background/50' : 'bg-[oklch(0.99_0.002_250)] dark:bg-muted/10'}`}
                 >
                   <TableCell className="px-4 py-3 font-mono text-sm font-medium">#{run.runNumber}</TableCell>
                   <TableCell className="py-3 text-sm">{run.startedAt}</TableCell>
@@ -132,14 +132,14 @@ function NestedRunsTable({ scenario }: NestedRunsTableProps) {
                   <TableCell className="py-3 text-center">
                     <StatusBadge status={run.status} />
                   </TableCell>
-                  <TableCell className="px-4 py-3 text-right">
+                  <TableCell className="print:hidden px-4 py-3 text-right">
                     <Button
-                      variant="default"
-                      size="sm"
-                      className="bg-slate-blue hover:bg-slate-blue/90 text-white font-medium gap-1.5"
+                      variant="ghost"
+                      size="icon"
+                      className="text-muted-foreground hover:text-slate-blue hover:bg-slate-100 h-8 w-8 rounded-full transition-colors"
+                      title="Show Details"
                     >
-                      <Play className="h-3.5 w-3.5" />
-                      Show Details
+                      <Play className="h-4 w-4" />
                     </Button>
                   </TableCell>
                 </TableRow>
@@ -171,22 +171,22 @@ export function ScenarioBreakdownTable({ scenarios, isLoading }: ScenarioBreakdo
       initial="hidden"
       animate="visible"
     >
-      <Card className="border-0 shadow-sm">
-        <CardHeader className="bg-emerald px-6 py-4 rounded-t-lg">
+      <Card className="border-0 shadow-sm p-0 gap-0 sm:p-0 overflow-hidden">
+        <CardHeader className="bg-emerald px-6 py-4 rounded-t-xl">
           <CardTitle className="text-lg font-semibold text-white tracking-tight">
             Scenario Breakdown
           </CardTitle>
         </CardHeader>
         <CardContent className="p-0">
-          <div className="overflow-x-auto">
+          <div className="max-h-[600px] overflow-y-auto overflow-x-auto print:max-h-none print:overflow-visible custom-scrollbar relative block">
             <Table>
-              <TableHeader>
-                <TableRow className="bg-[oklch(0.97_0.005_250)] hover:bg-[oklch(0.97_0.005_250)]">
+              <TableHeader className="sticky top-0 z-20 shadow-sm bg-white dark:bg-card">
+                <TableRow className="bg-[oklch(0.97_0.005_250)] dark:bg-muted/40 hover:bg-[oklch(0.97_0.005_250)] dark:hover:bg-muted/40">
                   <TableHead className="font-semibold text-emerald py-4 px-6 w-[40%]">Name</TableHead>
                   <TableHead className="font-semibold text-emerald py-4 text-center">Total Runs</TableHead>
                   <TableHead className="font-semibold text-emerald py-4 text-center">Pass Rate</TableHead>
                   <TableHead className="font-semibold text-emerald py-4 text-center">Last Status</TableHead>
-                  <TableHead className="font-semibold text-emerald py-4 px-6 text-right">Actions</TableHead>
+                  <TableHead className="print:hidden font-semibold text-emerald py-4 px-6 text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -197,7 +197,7 @@ export function ScenarioBreakdownTable({ scenarios, isLoading }: ScenarioBreakdo
                       <TableCell className="text-center"><Skeleton className="h-5 w-12 mx-auto" /></TableCell>
                       <TableCell className="text-center"><Skeleton className="h-5 w-16 mx-auto" /></TableCell>
                       <TableCell className="text-center"><Skeleton className="h-6 w-20 mx-auto rounded-full" /></TableCell>
-                      <TableCell className="px-6 text-right"><Skeleton className="h-9 w-24 ml-auto" /></TableCell>
+                      <TableCell className="print:hidden px-6 text-right"><Skeleton className="h-9 w-24 ml-auto" /></TableCell>
                     </TableRow>
                   ))
                 ) : scenarios.length === 0 ? (
@@ -209,7 +209,7 @@ export function ScenarioBreakdownTable({ scenarios, isLoading }: ScenarioBreakdo
                 ) : (
                   scenarios.map((scenario: Scenario, index: number) => (
                     <React.Fragment key={scenario.id}>
-                      <TableRow className={`hover:bg-muted/30 transition-colors ${index % 2 === 0 ? 'bg-white' : 'bg-[oklch(0.98_0.003_250)]'}`}>
+                      <TableRow className={`hover:bg-muted/30 transition-colors ${index % 2 === 0 ? 'bg-white dark:bg-background/50' : 'bg-[oklch(0.98_0.003_250)] dark:bg-muted/20'}`}>
                         <TableCell className="px-6 py-4 font-medium">{scenario.scenarioname}</TableCell>
                         <TableCell className="text-center font-mono text-sm font-semibold">{scenario.totaltests ?? 0}</TableCell>
                         <TableCell className="text-center">
@@ -224,23 +224,18 @@ export function ScenarioBreakdownTable({ scenarios, isLoading }: ScenarioBreakdo
                         <TableCell className="text-center">
                           <StatusBadge status={getLastStatus(scenario)} />
                         </TableCell>
-                        <TableCell className="px-6 text-right">
+                        <TableCell className="print:hidden px-6 text-right">
                           <Button
-                            variant="default"
-                            size="sm"
+                            variant="ghost"
+                            size="icon"
                             onClick={() => toggleRow(scenario.id)}
-                            className="bg-slate-blue hover:bg-slate-blue/90 text-white font-medium gap-1.5"
+                            className="text-muted-foreground hover:text-slate-blue hover:bg-slate-100 h-8 w-8 rounded-full transition-colors"
+                            title={expandedRows.has(scenario.id) ? "Hide Runs" : "Show Runs"}
                           >
                             {expandedRows.has(scenario.id) ? (
-                              <>
-                                <ChevronDown className="h-4 w-4" />
-                                Hide Runs
-                              </>
+                              <ChevronDown className="h-5 w-5" />
                             ) : (
-                              <>
-                                <ChevronRight className="h-4 w-4" />
-                                Show
-                              </>
+                              <ChevronRight className="h-5 w-5" />
                             )}
                           </Button>
                         </TableCell>

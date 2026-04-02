@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Search, ChevronDown, ChevronUp, RefreshCw, ChevronsUpDown, CheckCircle2, XCircle, Clock, Play } from 'lucide-react';
+import { Search, ChevronDown, ChevronRight, ChevronUp, RefreshCw, ChevronsUpDown, CheckCircle2, XCircle, Clock, Play } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
@@ -112,7 +112,7 @@ function ChatBubble({ message }: { message: TranscriptMessage }) {
         className={`max-w-[85%] rounded-2xl px-4 py-2.5 shadow-sm ${
           isHuman
             ? 'bg-slate-blue text-white rounded-br-md'
-            : 'bg-[oklch(0.96_0.005_250)] text-foreground rounded-bl-md'
+            : 'bg-[oklch(0.96_0.005_250)] dark:bg-muted text-foreground rounded-bl-md'
         }`}
       >
         <p className="text-sm leading-relaxed">{message.content}</p>
@@ -129,7 +129,7 @@ function ChatBubble({ message }: { message: TranscriptMessage }) {
 
 function PerformanceMetric({ label, value, unit, highlight }: { label: string; value: string | number; unit?: string; highlight?: boolean }) {
   return (
-    <div className="bg-white rounded-lg border border-border/50 p-4 hover:shadow-sm transition-shadow">
+    <div className="bg-white dark:bg-background rounded-lg border border-border/50 p-4 hover:shadow-sm transition-shadow">
       <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mb-1.5">{label}</p>
       <p className={`text-xl font-bold ${highlight ? 'text-slate-blue' : 'text-emerald'}`}>
         {value}{unit && <span className="text-sm font-medium text-muted-foreground ml-0.5">{unit}</span>}
@@ -188,7 +188,7 @@ function TaskDetails({ task }: TaskDetailsProps) {
               <div className="w-1 h-5 bg-slate-blue rounded-full" />
               <h4 className="text-sm font-bold text-emerald uppercase tracking-wider">Transcript</h4>
             </div>
-            <div className="flex-1 bg-white rounded-xl border border-border/50 shadow-inner overflow-hidden">
+            <div className="flex-1 bg-white dark:bg-muted/30 rounded-xl border border-border/50 shadow-inner overflow-hidden">
               <div className="max-h-[280px] overflow-y-auto p-4 custom-scrollbar">
                 {transcript.map((message: TranscriptMessage) => (
                   <ChatBubble key={message.id} message={message} />
@@ -261,8 +261,8 @@ export function TaskSummaryTable({ tasks, isLoading, onRefresh, isRefreshing }: 
       initial="hidden"
       animate="visible"
     >
-      <Card className="border-0 shadow-sm">
-        <CardHeader className="bg-emerald px-6 py-4 rounded-t-lg">
+      <Card className="border-0 shadow-sm p-0 gap-0 sm:p-0 overflow-hidden">
+        <CardHeader className="bg-emerald px-6 py-4 rounded-t-xl">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <CardTitle className="text-lg font-semibold text-white tracking-tight">
               Task Summary
@@ -292,21 +292,22 @@ export function TaskSummaryTable({ tasks, isLoading, onRefresh, isRefreshing }: 
         </CardHeader>
         <CardContent className="p-0">
           {/* Search Bar & Filters */}
-          <div className="p-4 border-b border-border bg-[oklch(0.99_0.002_260)]">
-            <div className="flex flex-col sm:flex-row gap-4 items-center">
-              <div className="relative w-full max-w-sm">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <div className="print:hidden px-6 py-4 border-b border-border bg-[oklch(0.98_0.003_250)] dark:bg-muted/20 flex items-center">
+            <div className="inline-flex w-full sm:w-auto flex-col sm:flex-row items-center bg-white dark:bg-background border border-border/60 shadow-sm rounded-lg overflow-hidden p-1 gap-1">
+              <div className="relative w-full sm:w-[300px]">
+                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
                   type="text"
                   placeholder="Search by task name..."
                   value={searchQuery}
                   onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearchQuery(e.target.value)}
-                  className="pl-10 bg-card border-border"
+                  className="pl-9 bg-gray-100 dark:bg-muted border-transparent focus-visible:ring-0 focus-visible:ring-offset-0 shadow-inner h-9 w-full rounded-md"
                 />
               </div>
-              <div className="w-full sm:w-auto">
+              <div className="hidden sm:block w-px h-5 bg-border mx-1" />
+              <div className="w-full sm:w-[130px]">
                 <Select value={statusFilter} onValueChange={setStatusFilter}>
-                  <SelectTrigger className="w-full sm:w-[180px] bg-card border-border">
+                  <SelectTrigger className="bg-transparent border-0 focus:ring-0 focus:ring-offset-0 shadow-none h-9 hover:bg-muted/30 transition-colors rounded-md font-medium text-sm">
                     <SelectValue placeholder="Filter by status" />
                   </SelectTrigger>
                   <SelectContent>
@@ -320,10 +321,10 @@ export function TaskSummaryTable({ tasks, isLoading, onRefresh, isRefreshing }: 
           </div>
 
           {/* Table */}
-          <div className="overflow-x-auto">
+          <div className="max-h-[600px] overflow-y-auto overflow-x-auto print:max-h-none print:overflow-visible custom-scrollbar relative block">
             <Table>
-              <TableHeader>
-                <TableRow className="bg-[oklch(0.97_0.005_250)] hover:bg-[oklch(0.97_0.005_250)]">
+              <TableHeader className="sticky top-0 z-20 shadow-sm bg-white dark:bg-card">
+                <TableRow className="bg-[oklch(0.97_0.005_250)] dark:bg-muted/40 hover:bg-[oklch(0.97_0.005_250)] dark:hover:bg-muted/40">
                   <TableHead className="w-10" />
                   <TableHead className="font-semibold text-emerald py-4 px-6">Task Name</TableHead>
                   <TableHead className="font-semibold text-emerald py-4 text-center">Dialogue Turns</TableHead>
@@ -339,7 +340,7 @@ export function TaskSummaryTable({ tasks, isLoading, onRefresh, isRefreshing }: 
                     </div>
                   </TableHead>
                   <TableHead className="font-semibold text-emerald py-4 text-center">Status</TableHead>
-                  <TableHead className="font-semibold text-emerald py-4 px-6 text-right">Actions</TableHead>
+                  <TableHead className="print:hidden font-semibold text-emerald py-4 px-6 text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -351,7 +352,7 @@ export function TaskSummaryTable({ tasks, isLoading, onRefresh, isRefreshing }: 
                       <TableCell className="text-center"><Skeleton className="h-5 w-12 mx-auto" /></TableCell>
                       <TableCell className="text-center"><Skeleton className="h-5 w-16 mx-auto" /></TableCell>
                       <TableCell className="text-center"><Skeleton className="h-6 w-20 mx-auto rounded-full" /></TableCell>
-                      <TableCell className="px-6 text-right"><Skeleton className="h-9 w-28 ml-auto" /></TableCell>
+                      <TableCell className="print:hidden px-6 text-right"><Skeleton className="h-9 w-28 ml-auto" /></TableCell>
                     </TableRow>
                   ))
                 ) : filteredTasks.length === 0 ? (
@@ -363,7 +364,7 @@ export function TaskSummaryTable({ tasks, isLoading, onRefresh, isRefreshing }: 
                 ) : (
                   filteredTasks.map((task: Task, index: number) => (
                     <React.Fragment key={task.id}>
-                      <TableRow className={`hover:bg-muted/30 transition-colors ${index % 2 === 0 ? 'bg-white' : 'bg-[oklch(0.98_0.003_250)]'}`}>
+                      <TableRow className={`hover:bg-muted/30 transition-colors ${index % 2 === 0 ? 'bg-white dark:bg-background/50' : 'bg-[oklch(0.98_0.003_250)] dark:bg-muted/20'}`}>
                         <TableCell className="w-10 pl-4">
                           {getStatusIcon(task.statusKey)}
                         </TableCell>
@@ -377,23 +378,18 @@ export function TaskSummaryTable({ tasks, isLoading, onRefresh, isRefreshing }: 
                         <TableCell className="text-center">
                           {getStatusBadge(task.statusKey)}
                         </TableCell>
-                        <TableCell className="px-6 text-right">
+                        <TableCell className="print:hidden px-6 text-right">
                           <Button
-                            variant="default"
-                            size="sm"
+                            variant="ghost"
+                            size="icon"
                             onClick={() => toggleRow(task.id)}
-                            className="bg-slate-blue hover:bg-slate-blue/90 text-white font-medium gap-1.5"
+                            className="text-muted-foreground hover:text-slate-blue hover:bg-slate-100 h-8 w-8 rounded-full transition-colors"
+                            title={expandedRows.has(task.id) ? "Hide Details" : "Show Details"}
                           >
                             {expandedRows.has(task.id) ? (
-                              <>
-                                <ChevronDown className="h-4 w-4" />
-                                Hide Details
-                              </>
+                              <ChevronDown className="h-5 w-5" />
                             ) : (
-                              <>
-                                <Play className="h-4 w-4" />
-                                Show Details
-                              </>
+                              <ChevronRight className="h-5 w-5" />
                             )}
                           </Button>
                         </TableCell>

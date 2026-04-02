@@ -8,25 +8,28 @@ import ErrorBoundary from '@/components/system/error-boundary';
 
 import HomePage from '@/pages/index';
 import NotFoundPage from '@/pages/not-found';
+import { ThemeProvider } from '@/components/theme-provider';
 
 function App() {
 
   return (
-    <QueryClientProvider client={queryClient}>
-      <ErrorBoundary resetQueryCache>
-        <JotaiProvider>
-          <Toaster />
-          <Router>
-            <Routes>
-              <Route path="/" element={<Layout />}>
-                <Route index element={<HomePage />} />
-                <Route path="*" element={<NotFoundPage />} />
-              </Route>
-            </Routes>
-          </Router>
-        </JotaiProvider>
-      </ErrorBoundary>
-    </QueryClientProvider>
+    <ThemeProvider defaultTheme="system" storageKey="vite-ui-theme">
+      <QueryClientProvider client={queryClient}>
+        <ErrorBoundary resetQueryCache>
+          <JotaiProvider>
+            <Toaster />
+            <Router>
+              <Routes>
+                <Route path="/" element={<Layout />}>
+                  <Route index element={<HomePage />} />
+                  <Route path="*" element={<NotFoundPage />} />
+                </Route>
+              </Routes>
+            </Router>
+          </JotaiProvider>
+        </ErrorBoundary>
+      </QueryClientProvider>
+    </ThemeProvider>
   );
 }
 

@@ -8,6 +8,9 @@ import { useTaskList } from '@/generated/hooks/use-task';
 import { QualitySnapshotCards } from '@/components/quality-snapshot-cards';
 import { ScenarioBreakdownTable } from '@/components/scenario-breakdown-table';
 import { TaskSummaryTable } from '@/components/task-summary-table';
+import { ThemeToggle } from '@/components/theme-toggle';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { Download, FileText, FileSpreadsheet } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 const headerVariants = {
@@ -46,6 +49,55 @@ export default function HomePage() {
     setIsRefreshing(false);
   };
 
+  const handleExportPDF = () => {
+    window.print();
+  };
+
+  const handleExportCSV = () => {
+    if (!tasks || !scenarios) return;
+    
+    const headers = ["Type", "Name", "Key Metric 1", "Key Metric 2", "Status"];
+    const rows: string[][] = [];
+    
+    // Add Scenarios
+    scenarios.forEach(s => {
+      rows.push([
+        "Scenario", 
+        s.scenarioname ?? "Unknown", 
+        `Total Runs: ${s.totaltests ?? 0}`, 
+        `Pass Rate: ${(s.passratepercent ?? 0).toFixed(1)}%`, 
+        (s.passratepercent ?? 0) >= 90 ? "Pass" : "Fail"
+      ]);
+    });
+
+    // Add Tasks
+    tasks.forEach(t => {
+      let statusStr = "Unknown";
+      if (t.statusKey === "StatusKey0") statusStr = "Passed";
+      else if (t.statusKey === "StatusKey1") statusStr = "Failed";
+      else if (t.statusKey === "StatusKey2") statusStr = "In Progress";
+      
+      rows.push([
+        "Task", 
+        t.taskname ?? "Unknown", 
+        `Dialogue Turns: ${t.dialogueturns ?? 0}`, 
+        `Avg Latency: ${(t.advlatencys ?? 0).toFixed(2)}s`, 
+        statusStr
+      ]);
+    });
+
+    const csvContent = "data:text/csv;charset=utf-8," 
+        + [headers.join(","), ...rows.map(e => e.map(cell => `"${(cell || '').toString().replace(/"/g, '""')}"`).join(","))].join("\n");
+
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", `test_report_${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   return (
     <div className="min-h-screen bg-background">
       {/* Sticky Header */}
@@ -53,7 +105,7 @@ export default function HomePage() {
         variants={headerVariants}
         initial="hidden"
         animate="visible"
-        className="sticky top-0 z-50 bg-white border-t-[6px] border-t-emerald border-b border-border shadow-sm"
+        className="print:hidden sticky top-0 z-50 bg-white dark:bg-card border-t-[6px] border-t-emerald border-b border-border shadow-sm"
       >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex items-center justify-between">
@@ -74,6 +126,25 @@ export default function HomePage() {
               <span className="text-xs text-muted-foreground whitespace-nowrap hidden sm:inline">
                 Last Synced: {lastSynced ? formatTimestamp(lastSynced) : '--:--:--'}
               </span>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="sm" className="hidden sm:flex dark:border-border">
+                    <Download className="h-4 w-4 mr-2" />
+                    Export
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-40">
+                  <DropdownMenuItem onClick={handleExportPDF} className="cursor-pointer">
+                    <FileText className="h-4 w-4 mr-2" />
+                    PDF Report
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={handleExportCSV} className="cursor-pointer">
+                    <FileSpreadsheet className="h-4 w-4 mr-2" />
+                    CSV Data
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+              <ThemeToggle />
               <Button
                 onClick={handleRefresh}
                 disabled={isRefreshing}
@@ -89,14 +160,14 @@ export default function HomePage() {
 
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="space-y-8">
+        <div className="space-y-12">
           {/* Quality Snapshot Section */}
           <section>
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.1 }}
-              className="mb-4"
+              className="mb-6"
             >
               <h2 className="text-lg font-semibold text-emerald tracking-tight">
                 Quality Snapshot
@@ -117,7 +188,7 @@ export default function HomePage() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.3 }}
-              className="mb-4"
+              className="mb-6"
             >
               <h2 className="text-lg font-semibold text-emerald tracking-tight">
                 Test Coverage
@@ -138,7 +209,7 @@ export default function HomePage() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.5 }}
-              className="mb-4"
+              className="mb-6"
             >
               <h2 className="text-lg font-semibold text-emerald tracking-tight">
                 Execution Details
