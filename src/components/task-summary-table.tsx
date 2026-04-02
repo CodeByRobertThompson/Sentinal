@@ -1,12 +1,13 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Search, ChevronDown, RefreshCw, ChevronsUpDown, CheckCircle2, XCircle, Clock, Play } from 'lucide-react';
+import { Search, ChevronDown, ChevronUp, RefreshCw, ChevronsUpDown, CheckCircle2, XCircle, Clock, Play } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import type { Task, TaskStatusKey } from '@/generated/models/task-model';
 import { TaskStatusKeyToLabel } from '@/generated/models/task-model';
 
@@ -83,7 +84,7 @@ import transcriptData from '@/lib/transcripts.json';
 
 function generateMockTranscript(task: Task): TranscriptMessage[] {
   // If we have parsed JSON transcripts, look for matching task ID
-  const matches = transcriptData.filter((msg: any) => msg.taskId === task.id);
+  const matches = (transcriptData as any[]).filter((msg: any) => msg.taskId === task.id);
   
   if (matches.length > 0) {
     return matches as TranscriptMessage[];
@@ -110,7 +111,7 @@ function ChatBubble({ message }: { message: TranscriptMessage }) {
       <div
         className={`max-w-[85%] rounded-2xl px-4 py-2.5 shadow-sm ${
           isHuman
-            ? 'bg-emerald text-white rounded-br-md'
+            ? 'bg-slate-blue text-white rounded-br-md'
             : 'bg-[oklch(0.96_0.005_250)] text-foreground rounded-bl-md'
         }`}
       >
@@ -130,7 +131,7 @@ function PerformanceMetric({ label, value, unit, highlight }: { label: string; v
   return (
     <div className="bg-white rounded-lg border border-border/50 p-4 hover:shadow-sm transition-shadow">
       <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mb-1.5">{label}</p>
-      <p className={`text-xl font-bold ${highlight ? 'text-emerald' : 'text-slate-blue'}`}>
+      <p className={`text-xl font-bold ${highlight ? 'text-slate-blue' : 'text-emerald'}`}>
         {value}{unit && <span className="text-sm font-medium text-muted-foreground ml-0.5">{unit}</span>}
       </p>
     </div>
@@ -155,8 +156,8 @@ function TaskDetails({ task }: TaskDetailsProps) {
           {/* Left Column - Performance Metrics */}
           <div className="space-y-4">
             <div className="flex items-center gap-2 mb-3">
-              <div className="w-1 h-5 bg-slate-blue rounded-full" />
-              <h4 className="text-sm font-bold text-slate-blue uppercase tracking-wider">Performance</h4>
+              <div className="w-1 h-5 bg-emerald rounded-full" />
+              <h4 className="text-sm font-bold text-emerald uppercase tracking-wider">Performance</h4>
             </div>
             <div className="grid grid-cols-2 gap-3">
               <PerformanceMetric
@@ -184,8 +185,8 @@ function TaskDetails({ task }: TaskDetailsProps) {
           {/* Right Column - Transcript */}
           <div className="flex flex-col">
             <div className="flex items-center gap-2 mb-3">
-              <div className="w-1 h-5 bg-emerald rounded-full" />
-              <h4 className="text-sm font-bold text-slate-blue uppercase tracking-wider">Transcript</h4>
+              <div className="w-1 h-5 bg-slate-blue rounded-full" />
+              <h4 className="text-sm font-bold text-emerald uppercase tracking-wider">Transcript</h4>
             </div>
             <div className="flex-1 bg-white rounded-xl border border-border/50 shadow-inner overflow-hidden">
               <div className="max-h-[280px] overflow-y-auto p-4 custom-scrollbar">
@@ -202,13 +203,38 @@ function TaskDetails({ task }: TaskDetailsProps) {
 }
 
 export function TaskSummaryTable({ tasks, isLoading, onRefresh, isRefreshing }: TaskSummaryTableProps) {
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery, setSearchQuery] = useState(() => localStorage.getItem('sentinal-search-query') || '');
+  const [statusFilter, setStatusFilter] = useState(() => localStorage.getItem('sentinal-status-filter') || 'all');
+  const [sortConfig, setSortConfig] = useState<{ key: 'advlatencys' | null, direction: 'asc' | 'desc' }>(() => {
+    const saved = localStorage.getItem('sentinal-sort-config');
+    return saved ? JSON.parse(saved) : { key: null, direction: 'desc' };
+  });
+
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
   const [allExpanded, setAllExpanded] = useState(false);
 
-  const filteredTasks = tasks.filter((task: Task) =>
+  useEffect(() => {
+    localStorage.setItem('sentinal-search-query', searchQuery);
+    localStorage.setItem('sentinal-status-filter', statusFilter);
+    localStorage.setItem('sentinal-sort-config', JSON.stringify(sortConfig));
+  }, [searchQuery, statusFilter, sortConfig]);
+
+  let filteredTasks = tasks.filter((task: Task) =>
     task.taskname.toLowerCase().includes(searchQuery.toLowerCase())
   );
+
+  if (statusFilter !== 'all') {
+    filteredTasks = filteredTasks.filter(task => task.statusKey === statusFilter);
+  }
+
+  if (sortConfig.key === 'advlatencys') {
+    filteredTasks.sort((a, b) => {
+      const valA = a.advlatencys ?? 0;
+      const valB = b.advlatencys ?? 0;
+      if (sortConfig.direction === 'asc') return valA - valB;
+      return valB - valA;
+    });
+  }
 
   const toggleRow = (id: string) => {
     const newExpanded = new Set(expandedRows);
@@ -236,7 +262,7 @@ export function TaskSummaryTable({ tasks, isLoading, onRefresh, isRefreshing }: 
       animate="visible"
     >
       <Card className="border-0 shadow-sm">
-        <CardHeader className="bg-slate-blue px-6 py-4 rounded-t-lg">
+        <CardHeader className="bg-emerald px-6 py-4 rounded-t-lg">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <CardTitle className="text-lg font-semibold text-white tracking-tight">
               Task Summary
@@ -265,17 +291,31 @@ export function TaskSummaryTable({ tasks, isLoading, onRefresh, isRefreshing }: 
           </div>
         </CardHeader>
         <CardContent className="p-0">
-          {/* Search Bar */}
+          {/* Search Bar & Filters */}
           <div className="p-4 border-b border-border bg-[oklch(0.99_0.002_260)]">
-            <div className="relative max-w-sm">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                type="text"
-                placeholder="Search by task name..."
-                value={searchQuery}
-                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearchQuery(e.target.value)}
-                className="pl-10 bg-card border-border"
-              />
+            <div className="flex flex-col sm:flex-row gap-4 items-center">
+              <div className="relative w-full max-w-sm">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  type="text"
+                  placeholder="Search by task name..."
+                  value={searchQuery}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearchQuery(e.target.value)}
+                  className="pl-10 bg-card border-border"
+                />
+              </div>
+              <div className="w-full sm:w-auto">
+                <Select value={statusFilter} onValueChange={setStatusFilter}>
+                  <SelectTrigger className="w-full sm:w-[180px] bg-card border-border">
+                    <SelectValue placeholder="Filter by status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Statuses</SelectItem>
+                    <SelectItem value="StatusKey0">Passed</SelectItem>
+                    <SelectItem value="StatusKey1">Failed</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
           </div>
 
@@ -285,11 +325,21 @@ export function TaskSummaryTable({ tasks, isLoading, onRefresh, isRefreshing }: 
               <TableHeader>
                 <TableRow className="bg-[oklch(0.97_0.005_250)] hover:bg-[oklch(0.97_0.005_250)]">
                   <TableHead className="w-10" />
-                  <TableHead className="font-semibold text-slate-blue py-4 px-6">Task Name</TableHead>
-                  <TableHead className="font-semibold text-slate-blue py-4 text-center">Dialogue Turns</TableHead>
-                  <TableHead className="font-semibold text-slate-blue py-4 text-center">Avg Latency (s)</TableHead>
-                  <TableHead className="font-semibold text-slate-blue py-4 text-center">Status</TableHead>
-                  <TableHead className="font-semibold text-slate-blue py-4 px-6 text-right">Actions</TableHead>
+                  <TableHead className="font-semibold text-emerald py-4 px-6">Task Name</TableHead>
+                  <TableHead className="font-semibold text-emerald py-4 text-center">Dialogue Turns</TableHead>
+                  <TableHead 
+                    className="font-semibold text-emerald py-4 text-center cursor-pointer hover:bg-slate-100 transition-colors select-none"
+                    onClick={() => setSortConfig({ key: 'advlatencys', direction: sortConfig.direction === 'asc' ? 'desc' : 'asc' })}
+                  >
+                    <div className="flex items-center justify-center gap-1.5 hover:text-emerald transition-colors">
+                      Avg Latency (s)
+                      {sortConfig.key === 'advlatencys' ? (
+                        sortConfig.direction === 'asc' ? <ChevronUp className="h-4 w-4 text-emerald" /> : <ChevronDown className="h-4 w-4 text-emerald" />
+                      ) : <ChevronsUpDown className="h-4 w-4 opacity-50" />}
+                    </div>
+                  </TableHead>
+                  <TableHead className="font-semibold text-emerald py-4 text-center">Status</TableHead>
+                  <TableHead className="font-semibold text-emerald py-4 px-6 text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -332,7 +382,7 @@ export function TaskSummaryTable({ tasks, isLoading, onRefresh, isRefreshing }: 
                             variant="default"
                             size="sm"
                             onClick={() => toggleRow(task.id)}
-                            className="bg-emerald hover:bg-emerald/90 text-white font-medium gap-1.5"
+                            className="bg-slate-blue hover:bg-slate-blue/90 text-white font-medium gap-1.5"
                           >
                             {expandedRows.has(task.id) ? (
                               <>

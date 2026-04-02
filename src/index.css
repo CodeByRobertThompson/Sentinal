@@ -56,7 +56,7 @@
   --card-foreground: oklch(0.18 0.03 250);
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.18 0.03 250);
-  --primary: #16A34A;
+  --primary: #009639;
   --primary-foreground: oklch(0.99 0 0);
   --secondary: oklch(0.95 0.01 250);
   --secondary-foreground: oklch(0.25 0.03 250);
@@ -87,7 +87,7 @@
   /* Deep blue for section headers and KPI titles */
   --slate-blue: #186CE2;
   /* Primary green for buttons, success badges, active icons */
-  --emerald: #16A34A;
+  --emerald: #009639;
   --emerald-light: oklch(0.92 0.08 145);
   /* Crimson for fail status */
   --crimson: oklch(0.55 0.20 25);

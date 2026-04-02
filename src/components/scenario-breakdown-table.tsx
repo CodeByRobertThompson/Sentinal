@@ -105,13 +105,13 @@ function NestedRunsTable({ scenario }: NestedRunsTableProps) {
           <Table>
             <TableHeader>
               <TableRow className="bg-[oklch(0.96_0.008_250)] hover:bg-[oklch(0.96_0.008_250)]">
-                <TableHead className="font-semibold text-slate-blue py-3 px-4 text-sm">Run #</TableHead>
-                <TableHead className="font-semibold text-slate-blue py-3 text-sm">Started At</TableHead>
-                <TableHead className="font-semibold text-slate-blue py-3 text-sm">Duration</TableHead>
-                <TableHead className="font-semibold text-slate-blue py-3 text-center text-sm">Passed</TableHead>
-                <TableHead className="font-semibold text-slate-blue py-3 text-center text-sm">Failed</TableHead>
-                <TableHead className="font-semibold text-slate-blue py-3 text-center text-sm">Status</TableHead>
-                <TableHead className="font-semibold text-slate-blue py-3 px-4 text-right text-sm">Actions</TableHead>
+                <TableHead className="font-semibold text-emerald py-3 px-4 text-sm">Run #</TableHead>
+                <TableHead className="font-semibold text-emerald py-3 text-sm">Started At</TableHead>
+                <TableHead className="font-semibold text-emerald py-3 text-sm">Duration</TableHead>
+                <TableHead className="font-semibold text-emerald py-3 text-center text-sm">Passed</TableHead>
+                <TableHead className="font-semibold text-emerald py-3 text-center text-sm">Failed</TableHead>
+                <TableHead className="font-semibold text-emerald py-3 text-center text-sm">Status</TableHead>
+                <TableHead className="font-semibold text-emerald py-3 px-4 text-right text-sm">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -136,7 +136,7 @@ function NestedRunsTable({ scenario }: NestedRunsTableProps) {
                     <Button
                       variant="default"
                       size="sm"
-                      className="bg-emerald hover:bg-emerald/90 text-white font-medium gap-1.5"
+                      className="bg-slate-blue hover:bg-slate-blue/90 text-white font-medium gap-1.5"
                     >
                       <Play className="h-3.5 w-3.5" />
                       Show Details
@@ -172,7 +172,7 @@ export function ScenarioBreakdownTable({ scenarios, isLoading }: ScenarioBreakdo
       animate="visible"
     >
       <Card className="border-0 shadow-sm">
-        <CardHeader className="bg-slate-blue px-6 py-4 rounded-t-lg">
+        <CardHeader className="bg-emerald px-6 py-4 rounded-t-lg">
           <CardTitle className="text-lg font-semibold text-white tracking-tight">
             Scenario Breakdown
           </CardTitle>
@@ -182,11 +182,11 @@ export function ScenarioBreakdownTable({ scenarios, isLoading }: ScenarioBreakdo
             <Table>
               <TableHeader>
                 <TableRow className="bg-[oklch(0.97_0.005_250)] hover:bg-[oklch(0.97_0.005_250)]">
-                  <TableHead className="font-semibold text-slate-blue py-4 px-6 w-[40%]">Name</TableHead>
-                  <TableHead className="font-semibold text-slate-blue py-4 text-center">Total Runs</TableHead>
-                  <TableHead className="font-semibold text-slate-blue py-4 text-center">Pass Rate</TableHead>
-                  <TableHead className="font-semibold text-slate-blue py-4 text-center">Last Status</TableHead>
-                  <TableHead className="font-semibold text-slate-blue py-4 px-6 text-right">Actions</TableHead>
+                  <TableHead className="font-semibold text-emerald py-4 px-6 w-[40%]">Name</TableHead>
+                  <TableHead className="font-semibold text-emerald py-4 text-center">Total Runs</TableHead>
+                  <TableHead className="font-semibold text-emerald py-4 text-center">Pass Rate</TableHead>
+                  <TableHead className="font-semibold text-emerald py-4 text-center">Last Status</TableHead>
+                  <TableHead className="font-semibold text-emerald py-4 px-6 text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -229,7 +229,7 @@ export function ScenarioBreakdownTable({ scenarios, isLoading }: ScenarioBreakdo
                             variant="default"
                             size="sm"
                             onClick={() => toggleRow(scenario.id)}
-                            className="bg-emerald hover:bg-emerald/90 text-white font-medium gap-1.5"
+                            className="bg-slate-blue hover:bg-slate-blue/90 text-white font-medium gap-1.5"
                           >
                             {expandedRows.has(scenario.id) ? (
                               <>

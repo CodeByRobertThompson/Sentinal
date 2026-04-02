@@ -53,20 +53,18 @@ export default function HomePage() {
         variants={headerVariants}
         initial="hidden"
         animate="visible"
-        className="sticky top-0 z-50 bg-white border-b border-border shadow-sm"
+        className="sticky top-0 z-50 bg-white border-t-[6px] border-t-emerald border-b border-border shadow-sm"
       >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex items-center justify-between">
-            {/* Left: Logo Placeholder */}
+            {/* Left: Logo */}
             <div className="flex-shrink-0">
-              <div className="flex items-center justify-center px-4 py-2 bg-muted rounded-md border border-border">
-                <span className="text-sm font-medium text-muted-foreground">[Logo]</span>
-              </div>
+              <img src="/logo.png" alt="WaFd Bank Logo" className="h-9 w-auto" />
             </div>
 
             {/* Center: Title */}
             <div className="absolute left-1/2 transform -translate-x-1/2">
-              <h1 className="text-xl font-bold text-slate-blue tracking-tight whitespace-nowrap">
+              <h1 className="text-xl font-bold text-emerald tracking-tight whitespace-nowrap">
                 Agentic Chat Test Report
               </h1>
             </div>
@@ -79,7 +77,7 @@ export default function HomePage() {
               <Button
                 onClick={handleRefresh}
                 disabled={isRefreshing}
-                className="bg-emerald hover:bg-emerald/90 text-white"
+                className="bg-slate-blue hover:bg-slate-blue/90 text-white"
               >
                 <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
                 Refresh
@@ -100,7 +98,7 @@ export default function HomePage() {
               transition={{ delay: 0.1 }}
               className="mb-4"
             >
-              <h2 className="text-lg font-semibold text-slate-blue tracking-tight">
+              <h2 className="text-lg font-semibold text-emerald tracking-tight">
                 Quality Snapshot
               </h2>
               <p className="text-sm text-muted-foreground">
@@ -121,7 +119,7 @@ export default function HomePage() {
               transition={{ delay: 0.3 }}
               className="mb-4"
             >
-              <h2 className="text-lg font-semibold text-slate-blue tracking-tight">
+              <h2 className="text-lg font-semibold text-emerald tracking-tight">
                 Test Coverage
               </h2>
               <p className="text-sm text-muted-foreground">
@@ -142,7 +140,7 @@ export default function HomePage() {
               transition={{ delay: 0.5 }}
               className="mb-4"
             >
-              <h2 className="text-lg font-semibold text-slate-blue tracking-tight">
+              <h2 className="text-lg font-semibold text-emerald tracking-tight">
                 Execution Details
               </h2>
               <p className="text-sm text-muted-foreground">

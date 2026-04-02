@@ -55,7 +55,7 @@ export function QualitySnapshotCards({ data, isLoading }: QualitySnapshotCardsPr
             animate="visible"
             transition={{ delay: index * 0.1 }}
           >
-            <Card className="bg-white border border-border/50 shadow-sm hover:shadow-md transition-shadow">
+            <Card className="bg-white border-t-[5px] border-t-slate-blue border-l border-r border-b border-border/50 shadow-sm hover:shadow-md transition-shadow">
               <CardContent className="p-6">
                 <div className="flex items-start justify-between">
                   <div>
@@ -87,7 +87,7 @@ export function QualitySnapshotCards({ data, isLoading }: QualitySnapshotCardsPr
         animate="visible"
         transition={{ delay: 0.3 }}
       >
-        <Card className="bg-white border border-border/50 shadow-sm hover:shadow-md transition-shadow">
+        <Card className="bg-white border-t-[5px] border-t-emerald border-l border-r border-b border-border/50 shadow-sm hover:shadow-md transition-shadow">
           <CardContent className="p-6">
             <div className="flex items-start justify-between">
               <div>
@@ -120,7 +120,7 @@ export function QualitySnapshotCards({ data, isLoading }: QualitySnapshotCardsPr
                     cy="18"
                     r="14"
                     fill="none"
-                    stroke="#16A34A"
+                    stroke="#009639"
                     strokeWidth="3"
                     strokeLinecap="round"
                     strokeDasharray={`${(passRate / 100) * 87.96} 87.96`}
