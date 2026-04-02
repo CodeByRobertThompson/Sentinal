@@ -82,16 +82,26 @@ interface TranscriptMessage {
 // Generate mock transcript data for a task
 import transcriptData from '@/lib/transcripts.json';
 
-function generateMockTranscript(task: Task): TranscriptMessage[] {
-  // If we have parsed JSON transcripts, look for matching task ID
-  const matches = (transcriptData as any[]).filter((msg: any) => msg.taskId === task.id);
-  
-  if (matches.length > 0) {
-    return matches as TranscriptMessage[];
+let transcriptsByTaskId: Map<string, TranscriptMessage[]> | null = null;
+function getTranscriptsByTaskId() {
+  if (!transcriptsByTaskId) {
+    transcriptsByTaskId = new Map();
+    if (transcriptData && Array.isArray(transcriptData)) {
+      for (const msg of transcriptData as any[]) {
+        if (msg.taskId) {
+          const arr = transcriptsByTaskId.get(msg.taskId);
+          if (arr) arr.push(msg);
+          else transcriptsByTaskId.set(msg.taskId, [msg]);
+        }
+      }
+    }
   }
-  
-  // Return an empty array or fallback mock data if no Excel data is present
-  return [];
+  return transcriptsByTaskId;
+}
+
+function generateMockTranscript(task: Task): TranscriptMessage[] {
+  const map = getTranscriptsByTaskId();
+  return map.get(task.id) || [];
 }
 
 interface TaskDetailsProps {
@@ -212,6 +222,12 @@ export function TaskSummaryTable({ tasks, isLoading, onRefresh, isRefreshing }: 
 
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
   const [allExpanded, setAllExpanded] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 20;
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, statusFilter, sortConfig]);
 
   useEffect(() => {
     localStorage.setItem('sentinal-search-query', searchQuery);
@@ -241,6 +257,12 @@ export function TaskSummaryTable({ tasks, isLoading, onRefresh, isRefreshing }: 
     return result;
   }, [tasks, searchQuery, statusFilter, sortConfig]);
 
+  const totalPages = Math.ceil(filteredTasks.length / pageSize);
+  const currentTasks = useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    return filteredTasks.slice(start, start + pageSize);
+  }, [filteredTasks, currentPage, pageSize]);
+
   const toggleRow = (id: string) => {
     const newExpanded = new Set(expandedRows);
     if (newExpanded.has(id)) {
@@ -255,7 +277,7 @@ export function TaskSummaryTable({ tasks, isLoading, onRefresh, isRefreshing }: 
     if (allExpanded) {
       setExpandedRows(new Set());
     } else {
-      setExpandedRows(new Set(filteredTasks.map((t: Task) => t.id)));
+      setExpandedRows(new Set(currentTasks.map((t: Task) => t.id)));
     }
     setAllExpanded(!allExpanded);
   };
@@ -360,14 +382,14 @@ export function TaskSummaryTable({ tasks, isLoading, onRefresh, isRefreshing }: 
                       <TableCell className="print:hidden px-6 text-right"><Skeleton className="h-9 w-28 ml-auto" /></TableCell>
                     </TableRow>
                   ))
-                ) : filteredTasks.length === 0 ? (
+                ) : currentTasks.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
                       {searchQuery ? 'No tasks match your search' : 'No task data available'}
                     </TableCell>
                   </TableRow>
                 ) : (
-                  filteredTasks.map((task: Task, index: number) => (
+                  currentTasks.map((task: Task, index: number) => (
                     <React.Fragment key={task.id}>
                       <TableRow className={`hover:bg-muted/30 transition-colors ${index % 2 === 0 ? 'bg-white dark:bg-background/50' : 'bg-[oklch(0.98_0.003_250)] dark:bg-muted/20'}`}>
                         <TableCell className="w-10 pl-4">
@@ -414,6 +436,34 @@ export function TaskSummaryTable({ tasks, isLoading, onRefresh, isRefreshing }: 
               </TableBody>
             </Table>
           </div>
+          {/* Pagination Controls */}
+          {totalPages > 1 && (
+            <div className="flex items-center justify-between px-6 py-4 border-t border-border bg-white dark:bg-card">
+              <span className="text-sm text-muted-foreground font-medium">
+                Showing {((currentPage - 1) * pageSize) + 1} to {Math.min(currentPage * pageSize, filteredTasks.length)} of {filteredTasks.length} entries
+              </span>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                  disabled={currentPage === 1}
+                  className="bg-transparent dark:border-border"
+                >
+                  Previous
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                  disabled={currentPage === totalPages}
+                  className="bg-transparent dark:border-border"
+                >
+                  Next
+                </Button>
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
     </motion.div>
