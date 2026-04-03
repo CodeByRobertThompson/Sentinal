@@ -9,6 +9,7 @@ import { QualitySnapshotCards } from '@/components/quality-snapshot-cards';
 import { ScenarioBreakdownTable } from '@/components/scenario-breakdown-table';
 import { TaskSummaryTable } from '@/components/task-summary-table';
 import { ThemeToggle } from '@/components/theme-toggle';
+import { ScenarioGeneratorModal } from '@/components/scenario-generator-modal';
 import { FileText } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
@@ -128,14 +129,17 @@ export default function HomePage() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.3 }}
-              className="mb-6"
+              className="mb-6 flex items-center justify-between"
             >
-              <h2 className="text-lg font-semibold text-emerald tracking-tight">
-                Test Coverage
-              </h2>
-              <p className="text-sm text-muted-foreground">
-                Detailed breakdown by scenario
-              </p>
+              <div>
+                <h2 className="text-lg font-semibold text-emerald tracking-tight">
+                  Test Coverage
+                </h2>
+                <p className="text-sm text-muted-foreground">
+                  Detailed breakdown by scenario
+                </p>
+              </div>
+              <ScenarioGeneratorModal />
             </motion.div>
             <ScenarioBreakdownTable
               scenarios={scenarios ?? []}

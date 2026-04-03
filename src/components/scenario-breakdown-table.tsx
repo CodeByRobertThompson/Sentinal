@@ -100,7 +100,17 @@ function NestedRunsTable({ scenario }: NestedRunsTableProps) {
       transition={{ duration: 0.3, ease: 'easeOut' as const }}
       className="overflow-hidden"
     >
-      <div className="px-8 py-4 bg-[oklch(0.97_0.005_250)] dark:bg-muted/20 border-t border-border">
+      <div className="px-8 py-4 bg-[oklch(0.97_0.005_250)] dark:bg-muted/20 border-t border-border flex flex-col gap-4">
+        {scenario.testScript && (
+          <div className="rounded-lg border border-[#30363d] overflow-hidden bg-[#0d1117] text-[#c9d1d9] font-mono text-sm leading-relaxed p-5 shadow-inner relative">
+             <div className="absolute top-0 right-0 bg-[#161b22] text-xs px-3 py-1.5 text-emerald font-semibold rounded-bl-lg border-l border-b border-[#30363d] shadow-sm flex items-center gap-2">
+               <span>tests/scenario.spec.ts</span>
+             </div>
+             <pre className="overflow-x-auto custom-scrollbar pt-2">
+               <code>{scenario.testScript}</code>
+             </pre>
+          </div>
+        )}
         <div className="rounded-lg border border-border overflow-hidden bg-white dark:bg-background/50">
           <Table>
             <TableHeader>
