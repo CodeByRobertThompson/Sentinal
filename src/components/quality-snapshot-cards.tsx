@@ -183,7 +183,7 @@ export function QualitySnapshotCards({ data, isLoading }: QualitySnapshotCardsPr
                   dataKey="value"
                   labelLine={false}
                 >
-                  {mockIntentData.map((entry, index) => (
+                  {mockIntentData.map((_entry, index) => (
                     <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                   ))}
                 </Pie>
