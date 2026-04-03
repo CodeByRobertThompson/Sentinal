@@ -67,7 +67,7 @@ export function ScenarioGeneratorModal() {
             AI Scenario Generator
           </DialogTitle>
           <DialogDescription>
-            Describe a hypothetical user context or vulnerability. The LLM will structurally generate realistic test scenarios exploring that boundary.
+            Describe the type of user interaction or edge case you want to test. Sentinal will automatically generate realistic chat scenarios covering those situations.
           </DialogDescription>
         </DialogHeader>
 
@@ -76,7 +76,7 @@ export function ScenarioGeneratorModal() {
             <Label htmlFor="prompt" className="text-emerald">Scenario Prompt</Label>
             <Textarea 
               id="prompt" 
-              placeholder="e.g., A user rapidly trying differing passwords with slight typos while on a spotty mobile connection."
+              placeholder="e.g., A stressed retail banking customer trying to immediately dispute a duplicate credit card charge while traveling internationally."
               value={prompt}
               onChange={(e) => setPrompt(e.target.value)}
               className="resize-none h-24 focus-visible:ring-emerald"

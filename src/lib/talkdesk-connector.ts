@@ -1,22 +1,16 @@
 import type { TalkdeskAuthConfig, TalkdeskAuthResponse, TalkdeskSession, TalkdeskPollingResult } from '../models/talkdesk-models';
 
-/**
- * A highly robust, deeply typed Connector bridging headless QA Automation 
- * natively straight into the Talkdesk Digital Interactions backbone.
- */
+
 export class TalkdeskConnector {
   private readonly baseUrl: string;
   private accessToken: string | null = null;
   private tokenExpiry: number | null = null;
 
   constructor(private config: TalkdeskAuthConfig) {
-    // US region explicitly declared
     this.baseUrl = 'https://api.talkdeskapp.com';
   }
 
-  /**
-   * Automates the core secure OAuth Exchange logic natively.
-   */
+
   public async authenticate(): Promise<void> {
     // Return early if we have a valid cached token to prevent rate limiting
     if (this.accessToken && this.tokenExpiry && Date.now() < this.tokenExpiry) {
@@ -100,7 +94,7 @@ export class TalkdeskConnector {
       if (!res.ok) throw new Error("TalkDesk Polling Crash");
 
       const logData: TalkdeskPollingResult = await res.json();
-      
+
       // 2. Identify the most recent system bounce
       const latestSystemChat = logData.messages.find(m => m.sender === 'system' || m.sender === 'agent');
 

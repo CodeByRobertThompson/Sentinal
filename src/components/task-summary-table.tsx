@@ -1,12 +1,13 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Search, ChevronDown, ChevronRight, ChevronUp, RefreshCw, ChevronsUpDown, CheckCircle2, XCircle, Clock } from 'lucide-react';
+import { Search, ChevronDown, ChevronRight, ChevronUp, RefreshCw, ChevronsUpDown, CheckCircle2, XCircle, Clock, User, Bot, Filter } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import type { Task, TaskStatusKey } from '@/generated/models/task-model';
 import { TaskStatusKeyToLabel } from '@/generated/models/task-model';
@@ -70,6 +71,23 @@ function getStatusBadge(statusKey?: TaskStatusKey) {
   }
 }
 
+function LatencyBadge({ latency }: { latency: number | null | undefined }) {
+  if (latency == null) return <span className="font-mono text-sm text-muted-foreground">—</span>;
+  
+  let bgColor = 'bg-emerald/10 text-emerald border-emerald/20';
+  if (latency > 4.5) {
+    bgColor = 'bg-red-500/10 text-red-600 dark:text-red-400 border-red-500/20 shadow-[0_0_8px_rgba(239,68,68,0.2)]';
+  } else if (latency > 2.0) {
+    bgColor = 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20';
+  }
+
+  return (
+    <span className={`inline-flex items-center px-2.5 py-0.5 rounded text-sm font-mono border ${bgColor}`}>
+      {latency.toFixed(2)}s
+    </span>
+  );
+}
+
 // Types for transcript messages
 interface TranscriptMessage {
   id: string;
@@ -116,34 +134,43 @@ function ChatBubble({ message }: { message: TranscriptMessage }) {
       initial={{ opacity: 0, y: 10, scale: 0.95 }}
       animate={{ opacity: 1, y: 0, scale: 1 }}
       transition={{ duration: 0.25, ease: [0.25, 0.46, 0.45, 0.94] as const }}
-      className={`flex flex-col ${isHuman ? 'items-end' : 'items-start'} mb-3`}
+      className={`flex w-full mb-4 ${isHuman ? 'justify-end' : 'justify-start'}`}
     >
-      <div
-        className={`max-w-[85%] rounded-2xl px-4 py-2.5 shadow-sm ${
-          isHuman
-            ? 'bg-slate-blue text-white rounded-br-md'
-            : 'bg-[oklch(0.96_0.005_250)] dark:bg-muted text-foreground rounded-bl-md'
-        }`}
-      >
-        <p className="text-sm leading-relaxed">{message.content}</p>
-      </div>
-      <div className={`flex items-center gap-2 mt-1 px-1 ${isHuman ? 'flex-row-reverse' : ''}`}>
-        <span className="text-[10px] text-muted-foreground font-medium">{message.timestamp}</span>
-        {message.latencyMs && (
-          <span className="text-[10px] text-muted-foreground/70 font-mono">{message.latencyMs}ms</span>
-        )}
+      <div className={`flex items-end max-w-[85%] gap-2 ${isHuman ? 'flex-row-reverse' : 'flex-row'}`}>
+        <Avatar className="w-6 h-6 border border-border/50 shrink-0 shadow-sm">
+          <AvatarFallback className={isHuman ? 'bg-slate-blue/10 dark:bg-slate-blue/20' : 'bg-emerald/10 dark:bg-emerald/20'}>
+            {isHuman ? <User className="w-3.5 h-3.5 text-slate-blue" /> : <Bot className="w-3.5 h-3.5 text-emerald" />}
+          </AvatarFallback>
+        </Avatar>
+        <div className="flex flex-col gap-1">
+          <div
+            className={`rounded-2xl px-4 py-2.5 shadow-sm ${
+              isHuman
+                ? 'bg-slate-blue text-white rounded-br-md border border-slate-blue'
+                : 'bg-white dark:bg-card text-foreground rounded-bl-md border border-border/60'
+            }`}
+          >
+            <p className="text-sm leading-relaxed">{message.content}</p>
+          </div>
+          <div className={`flex items-center gap-2 px-1 ${isHuman ? 'flex-row-reverse' : ''}`}>
+            <span className="text-[10px] text-muted-foreground font-medium">{message.timestamp}</span>
+            {message.latencyMs && (
+              <span className="text-[10px] text-muted-foreground/70 font-mono">{message.latencyMs}ms</span>
+            )}
+          </div>
+        </div>
       </div>
     </motion.div>
   );
 }
 
-function PerformanceMetric({ label, value, unit, highlight }: { label: string; value: string | number; unit?: string; highlight?: boolean }) {
+function PerformanceMetric({ label, value, unit, highlight }: { label: string; value: React.ReactNode; unit?: string; highlight?: boolean }) {
   return (
     <div className="bg-white dark:bg-background rounded-lg border border-border/50 p-4 hover:shadow-sm transition-shadow">
       <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mb-1.5">{label}</p>
-      <p className={`text-xl font-bold ${highlight ? 'text-slate-blue' : 'text-emerald'}`}>
+      <div className={`text-xl font-bold ${highlight ? 'text-slate-blue' : 'text-emerald'}`}>
         {value}{unit && <span className="text-sm font-medium text-muted-foreground ml-0.5">{unit}</span>}
-      </p>
+      </div>
     </div>
   );
 }
@@ -161,7 +188,7 @@ function TaskDetails({ task }: TaskDetailsProps) {
       transition={{ duration: 0.35, ease: [0.25, 0.46, 0.45, 0.94] as const }}
       className="overflow-hidden"
     >
-      <div className="px-6 py-5 bg-gradient-to-b from-[oklch(0.97_0.008_250)] to-[oklch(0.98_0.004_250)] border-t border-border">
+      <div className="px-6 py-5 bg-[oklch(0.97_0.008_250)] dark:bg-muted/10 border-t border-border">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Left Column - Performance Metrics */}
           <div className="space-y-4">
@@ -176,13 +203,11 @@ function TaskDetails({ task }: TaskDetailsProps) {
               />
               <PerformanceMetric
                 label="Avg Latency"
-                value={task.advlatencys?.toFixed(2) ?? '—'}
-                unit="s"
+                value={<LatencyBadge latency={task.advlatencys} />}
               />
               <PerformanceMetric
                 label="Initial Greeting"
-                value={initialGreetingTime}
-                unit="s"
+                value={<LatencyBadge latency={parseFloat(initialGreetingTime)} />}
               />
               <PerformanceMetric
                 label="Goal Evaluation"
@@ -198,8 +223,8 @@ function TaskDetails({ task }: TaskDetailsProps) {
               <div className="w-1 h-5 bg-slate-blue rounded-full" />
               <h4 className="text-sm font-bold text-emerald uppercase tracking-wider">Transcript</h4>
             </div>
-            <div className="flex-1 bg-white dark:bg-muted/30 rounded-xl border border-border/50 shadow-inner overflow-hidden">
-              <div className="max-h-[280px] overflow-y-auto p-4 custom-scrollbar">
+            <div className="flex-1 bg-gray-50/50 dark:bg-background/40 rounded-xl border border-border/50 shadow-inner overflow-hidden">
+              <div className="max-h-[280px] overflow-y-auto p-5 custom-scrollbar">
                 {transcript.map((message: TranscriptMessage) => (
                   <ChatBubble key={message.id} message={message} />
                 ))}
@@ -332,15 +357,16 @@ export function TaskSummaryTable({ tasks, isLoading, onRefresh, isRefreshing }: 
                 />
               </div>
               <div className="hidden sm:block w-px h-5 bg-border mx-1" />
-              <div className="w-full sm:w-[130px]">
+              <div className="w-full sm:w-[130px] flex items-center">
+                <Filter className="h-4 w-4 text-muted-foreground ml-2 absolute pointer-events-none" />
                 <Select value={statusFilter} onValueChange={setStatusFilter}>
-                  <SelectTrigger className="bg-transparent border-0 focus:ring-0 focus:ring-offset-0 shadow-none h-9 hover:bg-muted/30 transition-colors rounded-md font-medium text-sm">
-                    <SelectValue placeholder="Filter by status" />
+                  <SelectTrigger className="pl-8 bg-transparent border-0 focus:ring-0 focus:ring-offset-0 shadow-none h-9 hover:bg-muted/30 transition-colors rounded-md font-medium text-sm">
+                    <SelectValue placeholder="Status Filter" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">All Statuses</SelectItem>
-                    <SelectItem value="StatusKey0">Passed</SelectItem>
-                    <SelectItem value="StatusKey1">Failed</SelectItem>
+                    <SelectItem value="all">Faceted: All</SelectItem>
+                    <SelectItem value="StatusKey0">Faceted: Passed</SelectItem>
+                    <SelectItem value="StatusKey1">Faceted: Failed</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -350,17 +376,17 @@ export function TaskSummaryTable({ tasks, isLoading, onRefresh, isRefreshing }: 
           {/* Table */}
           <div className="max-h-[600px] overflow-y-auto overflow-x-auto print:max-h-none print:overflow-visible custom-scrollbar relative block">
             <Table>
-              <TableHeader className="sticky top-0 z-20 shadow-sm bg-white dark:bg-card">
+              <TableHeader className="sticky top-0 z-20 shadow-sm bg-white dark:bg-card border-b border-border">
                 <TableRow className="bg-[oklch(0.97_0.005_250)] dark:bg-muted/40 hover:bg-[oklch(0.97_0.005_250)] dark:hover:bg-muted/40">
                   <TableHead className="w-10" />
                   <TableHead className="font-semibold text-emerald py-4 px-6">Task Name</TableHead>
                   <TableHead className="font-semibold text-emerald py-4 text-center">Dialogue Turns</TableHead>
                   <TableHead 
-                    className="font-semibold text-emerald py-4 text-center cursor-pointer hover:bg-slate-100 transition-colors select-none"
+                    className="font-semibold text-emerald py-4 text-center cursor-pointer hover:bg-slate-100 dark:hover:bg-muted/60 transition-colors select-none"
                     onClick={() => setSortConfig({ key: 'advlatencys', direction: sortConfig.direction === 'asc' ? 'desc' : 'asc' })}
                   >
                     <div className="flex items-center justify-center gap-1.5 hover:text-emerald transition-colors">
-                      Avg Latency (s)
+                      Latency Mapping
                       {sortConfig.key === 'advlatencys' ? (
                         sortConfig.direction === 'asc' ? <ChevronUp className="h-4 w-4 text-emerald" /> : <ChevronDown className="h-4 w-4 text-emerald" />
                       ) : <ChevronsUpDown className="h-4 w-4 opacity-50" />}
@@ -391,7 +417,7 @@ export function TaskSummaryTable({ tasks, isLoading, onRefresh, isRefreshing }: 
                 ) : (
                   currentTasks.map((task: Task, index: number) => (
                     <React.Fragment key={task.id}>
-                      <TableRow className={`hover:bg-muted/30 transition-colors ${index % 2 === 0 ? 'bg-white dark:bg-background/50' : 'bg-[oklch(0.98_0.003_250)] dark:bg-muted/20'}`}>
+                      <TableRow className={`border-b border-border/40 hover:bg-muted/30 transition-colors ${index % 2 === 0 ? 'bg-white dark:bg-background/50' : 'bg-[oklch(0.99_0.002_250)] dark:bg-muted/10'}`}>
                         <TableCell className="w-10 pl-4">
                           {getStatusIcon(task.statusKey)}
                         </TableCell>
@@ -399,8 +425,8 @@ export function TaskSummaryTable({ tasks, isLoading, onRefresh, isRefreshing }: 
                         <TableCell className="text-center font-mono text-sm">
                           {task.dialogueturns ?? '-'}
                         </TableCell>
-                        <TableCell className="text-center font-mono text-sm">
-                          {task.advlatencys ? task.advlatencys.toFixed(2) : '-'}
+                        <TableCell className="text-center">
+                          <LatencyBadge latency={task.advlatencys} />
                         </TableCell>
                         <TableCell className="text-center">
                           {getStatusBadge(task.statusKey)}
@@ -423,7 +449,7 @@ export function TaskSummaryTable({ tasks, isLoading, onRefresh, isRefreshing }: 
                       </TableRow>
                       <AnimatePresence>
                         {expandedRows.has(task.id) && (
-                          <TableRow className="hover:bg-transparent">
+                          <TableRow className="hover:bg-transparent border-b-2 border-slate-blue/10">
                             <TableCell colSpan={6} className="p-0">
                               <TaskDetails task={task} />
                             </TableCell>

@@ -26,6 +26,7 @@ export async function generateScenariosAI(params: GenerateScenarioParams): Promi
 
     CRITICAL RULE: For EVERY scenario, you MUST write a highly detailed automation testing script acting exactly on that scenario.
     The script MUST be written using **Playwright with TypeScript**.
+    CRITICAL FORMATTING: The \`testScript\` output string MUST be heavily formatted with explicit newlines (\\n) and proper 2-space indentation so it renders beautifully as a multi-line Javascript code block. NEVER return a single, flat, unformatted string.
     Assume the environment relates to a Talkdesk chatbot or agentic integration. Use realistic 'page.locator(...)', 'expect', and simulated conversations or workflows.
   `;
 

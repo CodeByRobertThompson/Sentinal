@@ -106,7 +106,7 @@ function NestedRunsTable({ scenario }: NestedRunsTableProps) {
              <div className="absolute top-0 right-0 bg-[#161b22] text-xs px-3 py-1.5 text-emerald font-semibold rounded-bl-lg border-l border-b border-[#30363d] shadow-sm flex items-center gap-2">
                <span>tests/scenario.spec.ts</span>
              </div>
-             <pre className="overflow-x-auto custom-scrollbar pt-2">
+             <pre className="whitespace-pre-wrap break-words custom-scrollbar pt-2">
                <code>{scenario.testScript}</code>
              </pre>
           </div>
