@@ -27,6 +27,11 @@ export interface Scenario {
    * @displayName Total Tests
    */
   totaltests?: number;
+  /**
+   * @displayName Test Script
+   * @description Explicit LLM-generated Playwright automation script
+   */
+  testScript?: string;
 }
 
 export const _Scenario = 'Scenario' as const;
