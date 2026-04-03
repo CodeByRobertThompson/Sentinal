@@ -7,7 +7,7 @@ const mockTasks: Task[] = tasksData;
 
 export class TaskService {
   static async create(record: Omit<Task, 'id'>): Promise<Task> {
-    const newRecord = { ...record, id: Math.random().toString() };
+    const newRecord = { ...record, id: crypto.randomUUID() };
     mockTasks.push(newRecord);
     return newRecord;
   }
