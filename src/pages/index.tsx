@@ -10,6 +10,7 @@ import { ScenarioBreakdownTable } from '@/components/scenario-breakdown-table';
 import { TaskSummaryTable } from '@/components/task-summary-table';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { ScenarioGeneratorModal } from '@/components/scenario-generator-modal';
+import { TestRunnerPanel } from '@/components/test-runner-panel';
 import { FileText } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
@@ -145,6 +146,24 @@ export default function HomePage() {
               scenarios={scenarios ?? []}
               isLoading={isLoadingScenarios}
             />
+          </section>
+
+          {/* Live Test Runner Section */}
+          <section>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.4 }}
+              className="mb-6"
+            >
+              <h2 className="text-lg font-semibold text-emerald tracking-tight">
+                Live Test Runner
+              </h2>
+              <p className="text-sm text-muted-foreground">
+                Generate and execute conversational tests against Talkdesk
+              </p>
+            </motion.div>
+            <TestRunnerPanel />
           </section>
 
           {/* Task Summary Section */}

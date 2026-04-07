@@ -1,9 +1,15 @@
-// TalkDesk Core Models mapping to standard Conversations/Chat endpoints
+// TalkDesk Digital Connect Models
 
-export interface TalkdeskAuthConfig {
-  clientId: string;
-  clientSecret: string;
-  accountName: string; // The specific subdomain or account slug typically required
+export interface TalkdeskConfig {
+  /** Pre-issued bearer token */
+  bearerToken?: string;
+  /** Only needed if using OAuth client_credentials flow */
+  clientId?: string;
+  clientSecret?: string;
+  /** The account name (slug) for your TalkDesk instance */
+  accountName: string;
+  /** The touchpoint ID assigned to your Digital Connect channel */
+  touchpointId: string;
 }
 
 export interface TalkdeskAuthResponse {
@@ -12,19 +18,26 @@ export interface TalkdeskAuthResponse {
   expires_in: number;
 }
 
-export interface TalkdeskSession {
-  id: string;   // The uniquely generated Conversation/Chat ID
+/** Returned when starting a new Digital Connect conversation */
+export interface TalkdeskConversation {
+  id: string;
+  touchpoint_id: string;
+  contact_id: string;
   status: string;
   created_at: string;
 }
 
+/** A single message in the conversation */
 export interface TalkdeskMessage {
   id: string;
-  message: string;
-  sender: 'user' | 'system' | 'agent';
-  timestamp: string;
+  /** The text content of the message */
+  content: string;
+  /** 'customer' = us (the tester), 'bot' or 'agent' = TalkDesk side */
+  sender_type: 'customer' | 'bot' | 'agent';
+  created_at: string;
 }
 
-export interface TalkdeskPollingResult {
-  messages: TalkdeskMessage[];
+/** Response shape when listing messages in a conversation */
+export interface TalkdeskMessageListResponse {
+  data: TalkdeskMessage[];
 }

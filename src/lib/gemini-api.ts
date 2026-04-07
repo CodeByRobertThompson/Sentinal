@@ -1,4 +1,5 @@
 import type { Scenario } from '@/generated/models/scenario-model';
+import type { TestScript } from '@/models/test-script-models';
 
 // Use the local Vite env variable logic
 const GEMINI_API_KEY = (import.meta as any).env.VITE_GEMINI_API_KEY;
@@ -105,3 +106,132 @@ export async function generateScenariosAI(params: GenerateScenarioParams): Promi
     throw new Error(error.message || "An unexpected error occurred during generation.");
   }
 }
+
+// ═══════════════════════════════════════════════════════════════
+// Conversational Test Script Generation (for live Talkdesk tests)
+// ═══════════════════════════════════════════════════════════════
+
+export interface GenerateTestScriptParams {
+  prompt: string;
+  quantity: number;
+  edgeCasesOnly: boolean;
+}
+
+/**
+ * Generate structured conversational test scripts for execution
+ * against the Talkdesk Digital Connect API.
+ *
+ * Each script is a sequence of { userMessage, expectedResponsePattern }
+ * turns that get played against the live chatbot.
+ */
+export async function generateTestScripts(params: GenerateTestScriptParams): Promise<TestScript[]> {
+  if (!GEMINI_API_KEY) {
+    throw new Error('VITE_GEMINI_API_KEY is not defined in your .env.local file.');
+  }
+
+  const systemInstructions = `
+You are an expert QA Conversation Designer for a banking chatbot. Your goal is to generate structured conversational test scripts that will be executed automatically against a **Talkdesk Digital Connect** chatbot API.
+
+Each test script represents a multi-turn conversation between a customer and the bank's chatbot. The scripts will be replayed programmatically: the system sends each "userMessage" to the chatbot API, waits for a response, and checks if the response matches the "expectedResponsePattern".
+
+You must generate exactly ${params.quantity} test scripts.
+${params.edgeCasesOnly ? 'CRITICAL: Generate ONLY edge cases — confusing inputs, typos, adversarial prompts, multi-intent messages, emotional/frustrated customers, boundary conditions.' : 'Generate a healthy mix of common happy-path scenarios AND challenging edge cases.'}
+
+RULES FOR EACH SCRIPT:
+1. Each script must have 3–8 conversation turns (steps).
+2. "userMessage" should be realistic customer messages — include natural language, abbreviations, typos where appropriate for edge cases.
+3. "expectedResponsePattern" should be comma-separated keywords that the bot response MUST contain. Use broad, flexible keywords (not exact sentences). Example: "balance, account" means the bot response must contain both "balance" and "account" somewhere.
+4. For regex patterns, wrap in forward slashes: "/thank you|thanks|you're welcome/"
+5. Set "timeoutMs" to 15000 for normal steps, 20000 for steps where the bot might need to look something up.
+6. Give each script a clear, descriptive name and 1–3 relevant tags.
+7. The description should explain what the test validates in 1–2 sentences.
+
+CONTEXT: This is a WaFd Bank chatbot handling retail banking queries — account balances, transfers, disputes, branch hours, card issues, loan inquiries, etc.
+  `;
+
+  const responseSchema = {
+    type: "ARRAY",
+    items: {
+      type: "OBJECT",
+      properties: {
+        name: { type: "STRING" },
+        description: { type: "STRING" },
+        tags: {
+          type: "ARRAY",
+          items: { type: "STRING" }
+        },
+        steps: {
+          type: "ARRAY",
+          items: {
+            type: "OBJECT",
+            properties: {
+              userMessage: { type: "STRING" },
+              expectedResponsePattern: { type: "STRING" },
+              timeoutMs: { type: "INTEGER" }
+            },
+            required: ["userMessage", "expectedResponsePattern"]
+          }
+        }
+      },
+      required: ["name", "description", "tags", "steps"]
+    }
+  };
+
+  const requestBody = {
+    contents: [
+      {
+        role: "user",
+        parts: [
+          { text: systemInstructions },
+          { text: `Focus Prompt: ${params.prompt}` }
+        ]
+      }
+    ],
+    generationConfig: {
+      temperature: 0.85,
+      responseMimeType: "application/json",
+      responseSchema
+    }
+  };
+
+  try {
+    const res = await fetch(API_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(requestBody)
+    });
+
+    if (!res.ok) {
+      const errorData = await res.json();
+      throw new Error(errorData.error?.message || "Failed to fetch from Gemini API.");
+    }
+
+    const data = await res.json();
+    const rawContent = data.candidates?.[0]?.content?.parts?.[0]?.text;
+
+    if (!rawContent) {
+      throw new Error("Received an empty or malformed payload from Gemini.");
+    }
+
+    const parsedArray = JSON.parse(rawContent);
+
+    const scripts: TestScript[] = parsedArray.map((item: any) => ({
+      id: crypto.randomUUID(),
+      name: item.name,
+      description: item.description,
+      tags: item.tags ?? [],
+      steps: (item.steps ?? []).map((s: any) => ({
+        userMessage: s.userMessage,
+        expectedResponsePattern: s.expectedResponsePattern,
+        timeoutMs: s.timeoutMs ?? 15000,
+      })),
+    }));
+
+    return scripts;
+
+  } catch (error: any) {
+    console.error("Gemini Test Script Generation Error:", error);
+    throw new Error(error.message || "An unexpected error occurred during test script generation.");
+  }
+}
+

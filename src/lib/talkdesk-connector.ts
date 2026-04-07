@@ -1,124 +1,273 @@
-import type { TalkdeskAuthConfig, TalkdeskAuthResponse, TalkdeskSession, TalkdeskPollingResult } from '../models/talkdesk-models';
+import type {
+  TalkdeskConfig,
+  TalkdeskAuthResponse,
+  TalkdeskConversation,
+} from '../models/talkdesk-models';
 
-
+/**
+ * TalkDesk Digital Connect Connector
+ *
+ * Manages the full lifecycle of a Digital Connect conversation:
+ *   1. Authenticate (bearer token or OAuth client_credentials)
+ *   2. Start a conversation against a specific touchpoint
+ *   3. Send customer messages
+ *   4. Poll for bot/agent responses
+ */
 export class TalkdeskConnector {
-  private readonly baseUrl: string;
+  private readonly baseUrl = '/api/talkdesk';
   private accessToken: string | null = null;
   private tokenExpiry: number | null = null;
 
-  constructor(private config: TalkdeskAuthConfig) {
-    this.baseUrl = 'https://api.talkdeskapp.com';
+  constructor(private config: TalkdeskConfig) {
+    // If a pre-issued bearer token was provided (and it's not a placeholder), use it immediately
+    if (config.bearerToken && !config.bearerToken.startsWith('your_')) {
+      this.accessToken = config.bearerToken;
+      this.tokenExpiry = Date.now() + (24 * 60 * 60 * 1000); // assume 24h validity
+    }
   }
 
+  // ─── Authentication ─────────────────────────────────────
 
+  /**
+   * Ensures a valid access token is available.
+   * Skipped entirely if a bearer token was provided at construction.
+   */
   public async authenticate(): Promise<void> {
-    // Return early if we have a valid cached token to prevent rate limiting
     if (this.accessToken && this.tokenExpiry && Date.now() < this.tokenExpiry) {
       return;
     }
 
-    const authPayload = new URLSearchParams({
+    if (!this.config.clientId || !this.config.clientSecret) {
+      throw new Error(
+        'Token expired or missing. Provide a new bearerToken or configure OAuth (clientId + clientSecret).'
+      );
+    }
+
+    if (!this.config.accountName) {
+      throw new Error(
+        'Account name is required for OAuth. Set VITE_TALKDESK_ACCOUNT_NAME in .env.local.'
+      );
+    }
+
+    // Talkdesk OAuth uses HTTP Basic auth: Base64(client_id:client_secret)
+    const basicAuth = btoa(`${this.config.clientId}:${this.config.clientSecret}`);
+
+    const body = new URLSearchParams({
       grant_type: 'client_credentials',
-      client_id: this.config.clientId,
-      client_secret: this.config.clientSecret
     });
 
-    const res = await fetch(`${this.baseUrl}/oauth/token`, {
-      method: "POST",
+    // OAuth endpoint is on a SEPARATE domain: {account}.talkdeskid.com
+    const authUrl = `/api/talkdesk-auth/oauth/token`;
+
+    console.log('[TalkDesk] Authenticating via OAuth...', { account: this.config.accountName });
+
+    const res = await fetch(authUrl, {
+      method: 'POST',
       headers: {
-        "Content-Type": "application/x-www-form-urlencoded"
+        'Content-Type': 'application/x-www-form-urlencoded',
+        'Authorization': `Basic ${basicAuth}`,
       },
-      body: authPayload.toString()
+      body: body.toString()
     });
 
     if (!res.ok) {
       const err = await res.text();
-      throw new Error(`TalkDesk Auth Failed: ${err}`);
+      console.error('[TalkDesk] OAuth failed:', res.status, err);
+      throw new Error(`TalkDesk OAuth failed (${res.status}): ${err}`);
     }
 
     const data: TalkdeskAuthResponse = await res.json();
     this.accessToken = data.access_token;
-    // Buffer the expiry by 5 minutes to stay remarkably safe
     this.tokenExpiry = Date.now() + ((data.expires_in - 300) * 1000);
+    console.log('[TalkDesk] OAuth succeeded, token expires in', data.expires_in, 'seconds');
   }
 
+  // ─── Digital Connect: Conversations ─────────────────────
+
   /**
-   * Instantiates the core chat conversation socket natively via the REST API
+   * POST /digital-connect/conversations
+   * Creates a new conversation linked to the configured touchpoint.
    */
-  public async startChatSession(contextTitle: string = 'Sentinel Headless Interaction'): Promise<TalkdeskSession> {
+  public async startConversation(subject?: string): Promise<TalkdeskConversation> {
     await this.authenticate();
 
-    const res = await fetch(`${this.baseUrl}/chats/v1/sessions`, {
-      method: "POST",
-      headers: this.getAuthHeaders(),
-      body: JSON.stringify({
-        guest_name: 'Sentinel Auto-Test',
-        context: contextTitle
-      })
+    const idempotencyKey = typeof crypto !== 'undefined' && crypto.randomUUID
+      ? crypto.randomUUID()
+      : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+
+    console.log('[TalkDesk] Starting conversation with idempotency key:', idempotencyKey);
+
+    const headers: Record<string, string> = {
+      ...this.buildHeaders() as Record<string, string>,
+      'x-idempotency-key': idempotencyKey,
+    };
+
+    console.log('[TalkDesk] Request headers:', JSON.stringify(headers));
+
+    // Build request body with dynamic subject based on the test scenario
+    const requestBody: Record<string, any> = {
+      touchpoint_id: this.config.touchpointId,
+      contact_person: {
+        email: 'robert.95tt@gmail.com',
+      },
+      context_parameters: {
+        contact_name: 'Robert Thompson-Tunstall',
+        contact_phone: '+14014414682',
+        contact_reason: 'Testing',
+        website_location: 'https://wafdbank.com',
+      },
+    };
+
+    // Add subject if provided — this helps Talkdesk route the conversation
+    if (subject) {
+      requestBody.subject = subject;
+      console.log('[TalkDesk] Conversation subject:', subject);
+    }
+
+    const res = await fetch(`${this.baseUrl}/digital-connect/conversations`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(requestBody)
     });
 
-    if (!res.ok) throw new Error(`TalkDesk Session Creation Failed`);
-    return res.json() as Promise<TalkdeskSession>;
+    if (!res.ok) {
+      const err = await res.text();
+      console.error('[TalkDesk] Start conversation failed:', res.status, err);
+      throw new Error(`Failed to start conversation (${res.status}): ${err}`);
+    }
+
+    return res.json() as Promise<TalkdeskConversation>;
+  }
+
+  // ─── Digital Connect: Messages ──────────────────────────
+
+  /**
+   * POST /digital-connect/conversations/{id}/messages
+   * Sends a customer message into an active conversation.
+   * Returns the conversation_id and message_id on success.
+   */
+  public async sendMessage(conversationId: string, text: string): Promise<{ conversation_id: string; message_id: string }> {
+    await this.authenticate();
+
+    const idempotencyKey = typeof crypto !== 'undefined' && crypto.randomUUID
+      ? crypto.randomUUID()
+      : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+
+    console.log(`[TalkDesk] Sending message to ${conversationId}: "${text}" (Key: ${idempotencyKey})`);
+
+    const res = await fetch(
+      `${this.baseUrl}/digital-connect/conversations/${conversationId}/messages`,
+      {
+        method: 'POST',
+        headers: {
+          ...this.buildHeaders() as Record<string, string>,
+          'x-idempotency-key': idempotencyKey,
+        },
+        body: JSON.stringify({ content: text })
+      }
+    );
+
+    if (!res.ok) {
+      const err = await res.text();
+      console.error('[TalkDesk] Send message failed:', res.status, err);
+      throw new Error(`Failed to send message (${res.status}): ${err}`);
+    }
+
+    const data = await res.json();
+    console.log('[TalkDesk] Message sent successfully. ID:', data.message_id);
+    return data;
   }
 
   /**
-   * Formally inject a user message recursively into an existing session payload
+   * DELETE /digital-connect/conversations/{id}
+   * Ends an active conversation.
    */
-  public async sendMessage(sessionId: string, messageText: string): Promise<void> {
+  public async endConversation(conversationId: string): Promise<void> {
     await this.authenticate();
 
-    const res = await fetch(`${this.baseUrl}/chats/v1/sessions/${sessionId}/messages`, {
-      method: "POST",
-      headers: this.getAuthHeaders(),
-      body: JSON.stringify({ message: messageText })
+    console.log('[TalkDesk] Ending conversation:', conversationId);
+
+    const res = await fetch(`${this.baseUrl}/digital-connect/conversations/${conversationId}`, {
+      method: 'DELETE',
+      headers: this.buildHeaders(),
     });
 
-    if (!res.ok) throw new Error(`Failed to transmit message payload.`);
+    if (!res.ok && res.status !== 204) {
+      const err = await res.text();
+      console.error('[TalkDesk] End conversation failed:', res.status, err);
+      // We don't necessarily want to throw here if it's already ended or something, 
+      // but logging it is good.
+    } else {
+      console.log('[TalkDesk] Conversation ended successfully.');
+    }
   }
 
   /**
-   * Aggressively recursively polls the chatbot endpoint mathematically calculating differences 
-   * until the logical agent system physically replies to the user, strictly avoiding sleep hacks!
+   * Polls the local webhook server for the latest bot response.
+   * Talkdesk uses webhooks to deliver bot responses.
+   * Returns the text content of the *first new* bot message correctly.
    */
-  public async awaitBotResponse(sessionId: string, maxWaitMs = 15000): Promise<string> {
-    await this.authenticate();
+  public async awaitBotResponse(
+    conversationId: string,
+    maxWaitMs = 15000,
+    pollIntervalMs = 1000
+  ): Promise<string> {
     const startTime = Date.now();
 
     while (Date.now() - startTime < maxWaitMs) {
-      // 1. Fire get request reading the dialogue history
-      const res = await fetch(`${this.baseUrl}/chats/v1/sessions/${sessionId}/messages`, {
-        method: "GET",
-        headers: this.getAuthHeaders()
-      });
+      try {
+        const res = await fetch(`http://localhost:3001/api/messages/${conversationId}`);
+        if (res.ok) {
+          const { data: messages } = await res.json() as { data: Array<{ content: string, sender_type: string, created_at: string }> };
 
-      if (!res.ok) throw new Error("TalkDesk Polling Crash");
+          // Find a bot message that was received after we started polling
+          const botReply = messages.find(
+            m => m.sender_type === 'bot' && new Date(m.created_at).getTime() >= startTime
+          );
 
-      const logData: TalkdeskPollingResult = await res.json();
-
-      // 2. Identify the most recent system bounce
-      const latestSystemChat = logData.messages.find(m => m.sender === 'system' || m.sender === 'agent');
-
-      // 3. Prevent generic greeting grabs by checking timestamps against loop start internally
-      if (latestSystemChat && new Date(latestSystemChat.timestamp).getTime() > startTime) {
-        return latestSystemChat.message;
+          if (botReply) {
+            return botReply.content;
+          }
+        }
+      } catch (err) {
+        // Webhook server might not be running or reachable yet; fail gracefully during polling
+        console.warn('[TalkDesk] Failed to poll webhook server (is it running on port 3001?)');
       }
 
-      // Backoff recursively before checking again to prevent rate-limiting lockouts
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      await new Promise(resolve => setTimeout(resolve, pollIntervalMs));
     }
 
-    throw new Error('Talkdesk Bot Response Timeout Exceeded.');
+    throw new Error(`Bot did not respond within ${maxWaitMs / 1000}s. (Ensure Talkdesk Connections is sending to your webhook.)`);
   }
 
-  /**
-   * Standardizes Token Injection across networking pipes 
-   */
-  private getAuthHeaders(): HeadersInit {
-    if (!this.accessToken) throw new Error("Unauthenticated Native Status Error");
+  // ─── Internals ──────────────────────────────────────────
+
+  private buildHeaders(): HeadersInit {
+    if (!this.accessToken) {
+      throw new Error('Not authenticated. Call authenticate() or provide a bearerToken.');
+    }
     return {
-      "Authorization": `Bearer ${this.accessToken}`,
-      "Content-Type": "application/json",
-      "x-account": this.config.accountName
+      Authorization: `Bearer ${this.accessToken}`,
+      'Content-Type': 'application/json',
+      'x-account': this.config.accountName
     };
   }
+}
+
+// ─── Factory ──────────────────────────────────────────────
+
+/**
+ * Creates a TalkdeskConnector pre-configured from environment variables.
+ * Usage: const td = createTalkdeskConnector();
+ */
+export function createTalkdeskConnector(): TalkdeskConnector {
+  const env = (import.meta as any).env;
+
+  return new TalkdeskConnector({
+    bearerToken: env.VITE_TALKDESK_BEARER_TOKEN || undefined,
+    clientId: env.VITE_TALKDESK_CLIENT_ID || undefined,
+    clientSecret: env.VITE_TALKDESK_CLIENT_SECRET || undefined,
+    accountName: env.VITE_TALKDESK_ACCOUNT_NAME || '',
+    touchpointId: env.VITE_TALKDESK_TOUCHPOINT_ID || ''
+  });
 }
