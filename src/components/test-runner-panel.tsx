@@ -605,9 +605,6 @@ export function TestRunnerPanel() {
               Live Test Runner
             </CardTitle>
             <div className="flex items-center gap-2">
-              <div className="text-[10px] font-mono text-white/40 mr-4 whitespace-nowrap">
-                TARGET: {(import.meta as any).env.VITE_WEBHOOK_URL || 'localhost:3001'}
-              </div>
               {totalRuns > 0 && (
                 <div className="flex items-center gap-3 mr-4 text-white/80 text-xs">
                   <span><span className="font-semibold text-white">{totalRuns}</span> ran</span>
@@ -616,7 +613,6 @@ export function TestRunnerPanel() {
                 </div>
               )}
               <AutonomousScriptsModal onGenerated={handleGenerated} />
-              <GenerateScriptsModal onGenerated={handleGenerated} />
             </div>
           </div>
         </CardHeader>
@@ -633,8 +629,7 @@ export function TestRunnerPanel() {
                 Generate conversational test scripts with AI, or launch a live Autonomous 
                 agent to test the flows dynamically!
               </p>
-              <div className="flex gap-2">
-                <GenerateScriptsModal onGenerated={handleGenerated} />
+              <div className="flex justify-center mt-4">
                 <AutonomousScriptsModal onGenerated={handleGenerated} />
               </div>
             </div>

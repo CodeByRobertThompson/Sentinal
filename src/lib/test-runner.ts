@@ -186,7 +186,7 @@ export class TestRunner {
       let isFinished = false;
       let finalStatus: 'pass' | 'fail' | 'error' = 'error';
       let turnCount = 0;
-      const MAX_TURNS = 6;
+      const MAX_TURNS = 20;
 
       while (!isFinished && turnCount < MAX_TURNS) {
         turnCount++;
