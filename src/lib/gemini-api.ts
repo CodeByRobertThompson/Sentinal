@@ -230,8 +230,89 @@ CONTEXT: This is a WaFd Bank chatbot handling retail banking queries — account
     return scripts;
 
   } catch (error: any) {
-    console.error("Gemini Test Script Generation Error:", error);
+    console.error("Gemini Test Script Error:", error);
     throw new Error(error.message || "An unexpected error occurred during test script generation.");
   }
 }
+
+// ═══════════════════════════════════════════════════════════════
+// Autonomous Test Runner Generation
+// ═══════════════════════════════════════════════════════════════
+
+export interface GenerateDynamicReplyParams {
+  objective: string;
+  transcript: { role: string; content: string }[];
+}
+
+export async function generateDynamicReply(params: GenerateDynamicReplyParams): Promise<{ reply: string, isFinished: boolean, passResult: 'pass' | 'fail' | 'pending' }> {
+  if (!GEMINI_API_KEY) {
+    throw new Error('VITE_GEMINI_API_KEY is not defined in your .env.local file.');
+  }
+
+  const systemInstructions = `
+You are an expert QA Conversation Agent acting as a human customer. Your goal is to carry out an overarching 'Objective' by interacting dynamically with a bank chatbot.
+You will be provided with the current live transcript of the conversation so far.
+
+Based on the transcript and your Objective:
+1. Generate the next logical, realistic customer message to send to the bot (keep it under 3 sentences).
+2. Determine if the objective has been definitively completed (or definitively failed due to infinite loops/bot crashing). If so, set 'isFinished' to true.
+3. If finished, set 'passResult' to 'pass' if the bot successfully handled the objective, or 'fail' if the bot malfunctioned, refused, or failed.
+
+Remember: Be realistic, act like a natural user with human phrasing. Only declare the conversation finished when the fundamental objective is resolved or completely blocked.
+`;
+
+  const transcriptText = params.transcript.length > 0 
+    ? params.transcript.map(t => `${t.role.toUpperCase()}: ${t.content}`).join("\\n")
+    : "No messages yet. (You send the first message!)";
+
+  const responseSchema = {
+    type: "OBJECT",
+    properties: {
+      reply: { type: "STRING" },
+      isFinished: { type: "BOOLEAN" },
+      passResult: { type: "STRING" }
+    },
+    required: ["reply", "isFinished", "passResult"]
+  };
+
+  const requestBody = {
+    contents: [
+      {
+        role: "user",
+        parts: [
+          { text: systemInstructions },
+          { text: `Objective: ${params.objective}\\n\\nCurrent Transcript:\\n${transcriptText}` }
+        ]
+      }
+    ],
+    generationConfig: {
+      temperature: 0.7,
+      responseMimeType: "application/json",
+      responseSchema
+    }
+  };
+
+  try {
+    const res = await fetch(API_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(requestBody)
+    });
+
+    if (!res.ok) {
+      throw new Error("Failed to fetch dynamic reply from Gemini.");
+    }
+
+    const data = await res.json();
+    const rawContent = data.candidates?.[0]?.content?.parts?.[0]?.text;
+    if (!rawContent) throw new Error("Empty response from AI.");
+
+    return JSON.parse(rawContent);
+
+  } catch (error: any) {
+    console.error("Dynamic Generation Error:", error);
+    throw new Error(error.message || "An unexpected error occurred generating dynamic reply.");
+  }
+}
+
 

@@ -56,62 +56,66 @@ function StatusBadge({ status }: { status: 'pass' | 'fail' | 'error' }) {
 // ─── Transcript Viewer ──────────────────────────────────────────
 
 function TranscriptViewer({ result }: { result: TestRunResult }) {
+  // Use transcript to render the complete flow cleanly
+  const { transcript, stepResults } = result;
+
   return (
     <div className="space-y-3 p-4">
-      {/* Step Results */}
-      <div className="space-y-2">
-        {result.stepResults.map((sr, i) => (
-          <div
-            key={i}
-            className={`rounded-lg border p-3 ${
-              sr.passed
-                ? 'border-emerald/30 bg-emerald/5'
-                : 'border-crimson/30 bg-crimson/5'
-            }`}
-          >
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-xs font-semibold text-muted-foreground">Step {i + 1}</span>
-              <div className="flex items-center gap-2">
-                <span className="text-xs font-mono text-muted-foreground">{sr.latencyMs}ms</span>
-                <StatusIcon status={sr.passed ? 'pass' : 'fail'} />
-              </div>
-            </div>
-            <div className="space-y-2">
-              {/* User message */}
-              <div className="flex gap-2">
-                <div className="flex-shrink-0 h-6 w-6 rounded-full bg-slate-blue/10 flex items-center justify-center">
-                  <User className="h-3 w-3 text-slate-blue" />
-                </div>
-                <div className="bg-slate-blue/10 rounded-lg rounded-tl-none px-3 py-2 text-sm max-w-[85%]">
-                  {sr.step.userMessage}
-                </div>
-              </div>
-              {/* Bot response */}
-              <div className="flex gap-2 justify-end">
-                <div className={`rounded-lg rounded-tr-none px-3 py-2 text-sm max-w-[85%] ${
-                  sr.passed ? 'bg-emerald/10' : 'bg-crimson/10'
-                }`}>
-                  {sr.actualResponse || <span className="italic text-muted-foreground">{sr.error || 'No response'}</span>}
-                </div>
-                <div className={`flex-shrink-0 h-6 w-6 rounded-full flex items-center justify-center ${
-                  sr.passed ? 'bg-emerald/10' : 'bg-crimson/10'
-                }`}>
-                  <Bot className={`h-3 w-3 ${sr.passed ? 'text-emerald' : 'text-crimson'}`} />
-                </div>
-              </div>
-              {/* Expected pattern */}
-              <div className="text-xs text-muted-foreground pl-8">
-                <span className="font-medium">Expected:</span>{' '}
-                <code className="bg-muted/50 px-1.5 py-0.5 rounded text-[11px]">{sr.step.expectedResponsePattern}</code>
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
+      {transcript.map((entry, i) => (
+        <div key={i} className={`flex gap-2 ${entry.role === 'bot' ? 'justify-end' : ''}`}>
+           {entry.role === 'user' && (
+             <div className="flex-shrink-0 h-6 w-6 rounded-full bg-slate-blue/10 flex items-center justify-center">
+               <User className="h-3 w-3 text-slate-blue" />
+             </div>
+           )}
+           <div className={`rounded-lg px-3 py-2 text-sm max-w-[85%] ${
+             entry.role === 'bot' 
+               ? 'bg-emerald/10 rounded-tr-none' 
+               : 'bg-slate-blue/10 rounded-tl-none'
+           }`}>
+             {entry.content}
+           </div>
+           {entry.role === 'bot' && (
+             <div className="flex-shrink-0 h-6 w-6 rounded-full bg-emerald/10 flex items-center justify-center">
+               <Bot className="h-3 w-3 text-emerald" />
+             </div>
+           )}
+        </div>
+      ))}
     </div>
   );
 }
 
+// ─── Live Transcript Viewer ─────────────────────────────────────
+
+function LiveTranscriptViewer({ transcript }: { transcript: any[] }) {
+  return (
+    <div className="space-y-3 p-4 bg-muted/5 border-t border-border">
+      {transcript.map((entry, i) => (
+        <div key={i} className={`flex gap-2 ${entry.role === 'bot' ? 'justify-end' : ''}`}>
+           {entry.role === 'user' && (
+             <div className="flex-shrink-0 h-6 w-6 rounded-full bg-slate-blue/10 flex items-center justify-center">
+               <User className="h-3 w-3 text-slate-blue" />
+             </div>
+           )}
+           <div className={`rounded-lg px-3 py-2 text-sm max-w-[85%] ${
+             entry.role === 'bot' 
+               ? 'bg-emerald/10 rounded-tr-none' 
+               : 'bg-slate-blue/10 rounded-tl-none'
+           }`}>
+             {entry.content}
+           </div>
+           {entry.role === 'bot' && (
+             <div className="flex-shrink-0 h-6 w-6 rounded-full bg-emerald/10 flex items-center justify-center">
+               <Bot className="h-3 w-3 text-emerald" />
+             </div>
+           )}
+        </div>
+      ))}
+    </div>
+  );
+}
+      {/* Step Results */}
 // ─── Script Card ──────────────────────────────────────────────
 
 interface ScriptCardProps {
@@ -120,11 +124,12 @@ interface ScriptCardProps {
   isRunning: boolean;
   runningStatus?: string;
   runningProgress?: number;
+  liveTranscript?: any[];
   onRun: (script: TestScript) => void;
   onRemove: (id: string) => void;
 }
 
-function ScriptCard({ script, result, isRunning, runningStatus, runningProgress, onRun, onRemove }: ScriptCardProps) {
+function ScriptCard({ script, result, isRunning, runningStatus, runningProgress, liveTranscript, onRun, onRemove }: ScriptCardProps) {
   const [expanded, setExpanded] = useState(false);
 
   return (
@@ -241,24 +246,33 @@ function ScriptCard({ script, result, isRunning, runningStatus, runningProgress,
                 </div>
                 {result.stepResults.length > 0 && <TranscriptViewer result={result} />}
               </div>
+            ) : isRunning && liveTranscript && liveTranscript.length > 0 ? (
+              <LiveTranscriptViewer transcript={liveTranscript} />
             ) : (
               /* Preview steps before running */
               <div className="px-4 py-3 space-y-2">
-                {script.steps.map((step, i) => (
-                  <div key={i} className="flex gap-2 text-xs">
-                    <span className="font-mono text-muted-foreground w-6 text-right flex-shrink-0">{i + 1}.</span>
-                    <div className="flex-1">
-                      <div className="flex items-center gap-1.5">
-                        <User className="h-3 w-3 text-slate-blue" />
-                        <span className="font-medium">{step.userMessage}</span>
-                      </div>
-                      <div className="flex items-center gap-1.5 mt-0.5 text-muted-foreground">
-                        <Bot className="h-3 w-3" />
-                        <span>Expect: <code className="bg-muted/40 px-1 py-0.5 rounded text-[10px]">{step.expectedResponsePattern}</code></span>
+                {script.steps.length === 0 ? (
+                  <div className="text-xs text-muted-foreground italic flex items-center gap-2">
+                    <Bot className="h-3 w-3" />
+                    Autonomous Mode: Steps will be generated dynamically during execution.
+                  </div>
+                ) : (
+                  script.steps.map((step, i) => (
+                    <div key={i} className="flex gap-2 text-xs">
+                      <span className="font-mono text-muted-foreground w-6 text-right flex-shrink-0">{i + 1}.</span>
+                      <div className="flex-1">
+                        <div className="flex items-center gap-1.5">
+                          <User className="h-3 w-3 text-slate-blue" />
+                          <span className="font-medium">{step.userMessage}</span>
+                        </div>
+                        <div className="flex items-center gap-1.5 mt-0.5 text-muted-foreground">
+                          <Bot className="h-3 w-3" />
+                          <span>Expect: <code className="bg-muted/40 px-1 py-0.5 rounded text-[10px]">{step.expectedResponsePattern}</code></span>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ))}
+                  ))
+                )}
               </div>
             )}
           </motion.div>
@@ -379,6 +393,74 @@ function GenerateScriptsModal({ onGenerated }: { onGenerated: (scripts: TestScri
   );
 }
 
+// ─── Autonomous Mode Modal ──────────────────────────────────────
+
+function AutonomousScriptsModal({ onGenerated }: { onGenerated: (scripts: TestScript[]) => void }) {
+  const [open, setOpen] = useState(false);
+  const [objective, setObjective] = useState('');
+
+  const handleCreate = () => {
+    if (!objective.trim()) {
+      toast.error('Please enter an objective.');
+      return;
+    }
+    const autonomousShell: TestScript = {
+      id: crypto.randomUUID(),
+      name: "Autonomous Test Session",
+      description: objective,
+      steps: [], 
+      tags: ["Autonomous", "DynamicAI"]
+    };
+    onGenerated([autonomousShell]);
+    toast.success('Queued Autonomous Test Session');
+    setObjective('');
+    setOpen(false);
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button variant="outline" className="text-slate-blue border-slate-blue/20 hover:bg-slate-blue/5">
+          <Bot className="h-4 w-4 mr-2" />
+          Autonomous Mode
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="sm:max-w-[500px]">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <Bot className="h-5 w-5 text-slate-blue" />
+            Launch Autonomous Test
+          </DialogTitle>
+          <DialogDescription>
+            Give Sentinal an overarching objective. The AI will act as the customer, interpret 
+            your chatbot's responses dynamically, and figure out exactly what to say next to achieve the goal.
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="grid gap-4 py-4">
+          <div className="grid gap-2">
+            <Label htmlFor="objective" className="text-slate-blue">Customer Objective</Label>
+            <Textarea
+              id="objective"
+              placeholder="e.g. Try to reset my password but stubbornly refuse to give the last 4 digits of my SSN."
+              value={objective}
+              onChange={(e) => setObjective(e.target.value)}
+              className="resize-none h-24 focus-visible:ring-slate-blue"
+            />
+          </div>
+        </div>
+
+        <DialogFooter>
+          <Button variant="ghost" onClick={() => setOpen(false)}>Cancel</Button>
+          <Button onClick={handleCreate} disabled={!objective.trim()} className="bg-slate-blue hover:bg-slate-blue/90 text-white">
+            Queue Autonomous Run
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 // ═══════════════════════════════════════════════════════════════
 // Main Panel
 // ═══════════════════════════════════════════════════════════════
@@ -389,6 +471,7 @@ export function TestRunnerPanel() {
   const [runningScriptId, setRunningScriptId] = useState<string | null>(null);
   const [runningStatus, setRunningStatus] = useState('');
   const [runningProgress, setRunningProgress] = useState(0);
+  const [liveTranscript, setLiveTranscript] = useState<any[]>([]);
   const [isRunningAll, setIsRunningAll] = useState(false);
   const [keepAlive, setKeepAlive] = useState(false);
 
@@ -430,11 +513,24 @@ export function TestRunnerPanel() {
       const runner = new TestRunner(connector, {
         onStatusChange: (status) => setRunningStatus(status),
         onStepComplete: (stepIndex) => {
-          setRunningProgress(Math.round(((stepIndex + 1) / script.steps.length) * 100));
+          if (script.steps.length > 0) {
+              setRunningProgress(Math.round(((stepIndex + 1) / script.steps.length) * 100));
+          }
         },
+        onTranscriptUpdate: (t) => {
+          setLiveTranscript(t);
+        }
       });
 
-      const result = await runner.runScript(script);
+      let result: TestRunResult;
+      
+      if (script.tags.includes('Autonomous')) {
+        // Run Autonomous Mode
+        result = await runner.runAutonomous(script.description);
+      } else {
+        // Run Pre-scripted Mode
+        result = await runner.runScript(script);
+      }
 
       setResults((prev) => {
         const next = new Map(prev);
@@ -455,6 +551,7 @@ export function TestRunnerPanel() {
       setRunningScriptId(null);
       setRunningStatus('');
       setRunningProgress(0);
+      setLiveTranscript([]);
     }
   }, []);
 
@@ -507,6 +604,7 @@ export function TestRunnerPanel() {
                   <span><span className="font-semibold text-crimson-light">{failedRuns}</span> failed</span>
                 </div>
               )}
+              <AutonomousScriptsModal onGenerated={handleGenerated} />
               <GenerateScriptsModal onGenerated={handleGenerated} />
             </div>
           </div>
@@ -521,10 +619,13 @@ export function TestRunnerPanel() {
               </div>
               <h3 className="text-sm font-semibold text-foreground mb-1">No Test Scripts</h3>
               <p className="text-xs text-muted-foreground max-w-sm mb-4">
-                Generate conversational test scripts with AI, then run them against your
-                Talkdesk chatbot to validate responses automatically.
+                Generate conversational test scripts with AI, or launch a live Autonomous 
+                agent to test the flows dynamically!
               </p>
-              <GenerateScriptsModal onGenerated={handleGenerated} />
+              <div className="flex gap-2">
+                <GenerateScriptsModal onGenerated={handleGenerated} />
+                <AutonomousScriptsModal onGenerated={handleGenerated} />
+              </div>
             </div>
           ) : (
             <div>
@@ -602,6 +703,7 @@ export function TestRunnerPanel() {
                     isRunning={runningScriptId === script.id}
                     runningStatus={runningScriptId === script.id ? runningStatus : undefined}
                     runningProgress={runningScriptId === script.id ? runningProgress : undefined}
+                    liveTranscript={runningScriptId === script.id ? liveTranscript : undefined}
                     onRun={handleRunScript}
                     onRemove={handleRemoveScript}
                   />

@@ -12,8 +12,8 @@ app.use(express.json()); // body parser
 const conversationMessages = {};
 
 // 1. Webhook endpoint for Talkdesk Connect to POST to.
-app.post('/webhook/talkdesk', (req, res) => {
-  console.log('[Webhook Server] Received event:', JSON.stringify(req.body, null, 2));
+app.post(['/webhook/talkdesk', '/webchat'], (req, res) => {
+  console.log(`[Webhook Server] Received event on ${req.path}:`, JSON.stringify(req.body, null, 2));
   
   // The structure of the `message_created` event from Talkdesk Connections
   // You might need to adjust this depending on the exact payload Talkdesk sends.
@@ -21,10 +21,10 @@ app.post('/webhook/talkdesk', (req, res) => {
 
   const body = req.body;
   // Fallback to various known shapes that Webhooks might use
-  const conversationId = body.conversation_id || body.interaction_id || (body.data && body.data.conversation_id);
-  const content = body.content || body.message || (body.data && body.data.content);
+  const conversationId = body.conversation_id || (body.payload && body.payload.conversation_id) || body.interaction_id;
+  const content = body.content || (body.payload && body.payload.content) || body.message;
   
-  let senderType = body.sender_type || (body.data && body.data.sender_type) || 'bot';
+  let senderType = body.sender_type || (body.payload && body.payload.author && body.payload.author.type) || 'bot';
   // Standardize sender string
   if (senderType.toLowerCase().includes('bot') || senderType.toLowerCase().includes('agent')) {
     senderType = 'bot';
@@ -48,8 +48,9 @@ app.post('/webhook/talkdesk', (req, res) => {
     console.log(`[Webhook Server] Captured message for ${conversationId}: "${content}"`);
   }
 
-  // Always respond 200 OK so Talkdesk knows we received it
-  res.sendStatus(200);
+  // Some free tunnels like localtunnel throw 502 Bad Gateway when responding with an empty body
+  // Sending a physical JSON payload fixes the upstream proxy pipe error!
+  res.status(200).json({ success: true, message: "Received by local server" });
 });
 
 // 2. Endpoint for React dashboard to poll for messages

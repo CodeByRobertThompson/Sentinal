@@ -216,22 +216,50 @@ export class TalkdeskConnector {
 
     while (Date.now() - startTime < maxWaitMs) {
       try {
-        const res = await fetch(`http://localhost:3001/api/messages/${conversationId}`);
+        const azureUrl = (import.meta as any).env.VITE_AZURE_POLLING_URL;
+        if (!azureUrl) throw new Error("Azure Polling URL not found in .env.local");
+
+        // Polling the SharePoint Azure Logic App via POST
+        const res = await fetch(azureUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ conversation_id: conversationId })
+        });
+
         if (res.ok) {
-          const { data: messages } = await res.json() as { data: Array<{ content: string, sender_type: string, created_at: string }> };
+          const json = await res.json();
+          
+          // If the Logic App Response just mapped straight to the 'value' array, json IS the array.
+          // Otherwise, it might be nested inside json.value or json.data
+          const messages = Array.isArray(json) ? json : (json.value || json.data || []);
+
+          // Debug log so we can strictly verify what Azure is sending if it misses again
+          if (messages.length > 0) {
+            console.log('[TalkDesk] Azure Logic App returned messages:', messages);
+          }
 
           // Find a bot message that was received after we started polling
           const botReply = messages.find(
-            m => m.sender_type === 'bot' && new Date(m.created_at).getTime() >= startTime
+            (m: any) => {
+              // Support both the original local Node structure and SharePoint camelCase structure
+              const senderType = m.SenderType || m.sender_type;
+              
+              // If SharePoint didn't create a custom Timestamp column, use the system Created column
+              const timestamp = m.Timestamp || m.created_at || m.Created || new Date().toISOString();
+              
+              // Only consider it if it's from the bot. (We skip timestamp validation temporarily if missing)
+              const timeValid = timestamp ? new Date(timestamp).getTime() >= startTime : true;
+              return senderType?.toLowerCase() === 'bot' && timeValid;
+            }
           );
 
           if (botReply) {
-            return botReply.content;
+            return botReply.Content || botReply.content;
           }
         }
-      } catch (err) {
-        // Webhook server might not be running or reachable yet; fail gracefully during polling
-        console.warn('[TalkDesk] Failed to poll webhook server (is it running on port 3001?)');
+      } catch (err: any) {
+        // Log gracefully during polling
+        console.warn('[TalkDesk] Failed to poll Azure Logic App (will retry):', err.message);
       }
 
       await new Promise(resolve => setTimeout(resolve, pollIntervalMs));

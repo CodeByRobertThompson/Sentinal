@@ -24,17 +24,20 @@ export class TestRunner {
   private connector: TalkdeskConnector;
   private onStepComplete?: (stepIndex: number, result: TestStepResult) => void;
   private onStatusChange?: (status: string) => void;
+  private onTranscriptUpdate?: (transcript: TranscriptEntry[]) => void;
 
   constructor(
     connector: TalkdeskConnector,
     callbacks?: {
       onStepComplete?: (stepIndex: number, result: TestStepResult) => void;
       onStatusChange?: (status: string) => void;
+      onTranscriptUpdate?: (transcript: TranscriptEntry[]) => void;
     }
   ) {
     this.connector = connector;
     this.onStepComplete = callbacks?.onStepComplete;
     this.onStatusChange = callbacks?.onStatusChange;
+    this.onTranscriptUpdate = callbacks?.onTranscriptUpdate;
   }
 
   /**
@@ -89,6 +92,9 @@ export class TestRunner {
           });
         }
 
+        // Live stream update to UI
+        this.onTranscriptUpdate?.([...transcript]);
+
         this.onStepComplete?.(i, stepResult);
       }
 
@@ -128,6 +134,127 @@ export class TestRunner {
     this.onStatusChange?.(`Complete — ${status.toUpperCase()}`);
 
     return this.buildResult(runId, script, conversationId, startedAt, completedAt, stepResults, transcript, status, undefined);
+  }
+
+  // ─── Autonomous Execution ────────────────────────────────
+  
+  public async runAutonomous(objective: string): Promise<TestRunResult> {
+    const runId = crypto.randomUUID();
+    const startedAt = new Date().toISOString();
+    const stepResults: TestStepResult[] = [];
+    const transcript: TranscriptEntry[] = [];
+    let conversationId = '';
+    
+    // Create a dynamic script shell to satisfy TestRunResult type
+    const scriptShell: TestScript = {
+      id: crypto.randomUUID(),
+      name: "Autonomous AI Test",
+      description: objective,
+      steps: [],
+      tags: ["Dynamic", "AI"]
+    };
+
+    try {
+      this.onStatusChange?.('Authenticating…');
+      await this.connector.authenticate();
+
+      this.onStatusChange?.('Starting autonomous conversation…');
+      // Use the exact spelling and formatting from the user's working script
+      const subject = `Sentinal Test: ${objective.substring(0, 60)}`;
+      const conversation = await this.connector.startConversation(subject);
+      conversationId = conversation.id;
+      
+      try {
+        await fetch(`http://localhost:3001/api/messages/${conversationId}`, { method: 'DELETE' });
+      } catch {}
+
+      // Dynamic loop
+      // Dynamically load gemini generator to avoid circular deps up top
+      const { generateDynamicReply } = await import('./gemini-api');
+
+      // Do NOT send 'Hello'. Instead immediately consult Gemini for a potent conversational opener.
+      // This guarantees Talkdesk NLP hits an explicit Intent rather than falling back to the queue default framework.
+
+      let isFinished = false;
+      let finalStatus: 'pass' | 'fail' | 'error' = 'error';
+      let turnCount = 0;
+      const MAX_TURNS = 6;
+
+      while (!isFinished && turnCount < MAX_TURNS) {
+        turnCount++;
+        
+        // 1. Ask Gemini what to say next based on transcript so far
+        this.onStatusChange?.(`Turn ${turnCount}: AI synthesizing next message…`);
+        const aiDecision = await generateDynamicReply({ objective, transcript });
+        
+        if (aiDecision.isFinished) {
+           finalStatus = aiDecision.passResult as any;
+           this.onStatusChange?.(`AI declared objective finished: ${finalStatus.toUpperCase()}`);
+           break;
+        }
+
+        // 2. Send the suggested message
+        this.onStatusChange?.(`Turn ${turnCount}: Sending message to Talkdesk…`);
+        const startTime = Date.now();
+        await this.connector.sendMessage(conversationId, aiDecision.reply);
+        
+        transcript.push({
+          role: 'user',
+          content: aiDecision.reply,
+          timestamp: new Date().toISOString()
+        });
+        this.onTranscriptUpdate?.([...transcript]);
+
+        // 3. Wait for bot reply
+        this.onStatusChange?.(`Turn ${turnCount}: Waiting for bot response…`);
+        try {
+            const botResponse = await this.connector.awaitBotResponse(conversationId, 120000, 1000);
+            transcript.push({
+                role: 'bot',
+                content: botResponse,
+                timestamp: new Date().toISOString()
+            });
+            this.onTranscriptUpdate?.([...transcript]);
+            
+            // Record a step result so we have latency stats
+            stepResults.push({
+                step: { userMessage: aiDecision.reply, expectedResponsePattern: "DYNAMIC_AI_EVALUATION" },
+                actualResponse: botResponse,
+                passed: true,
+                latencyMs: Date.now() - startTime
+            });
+        } catch (e: any) {
+            finalStatus = 'fail';
+            stepResults.push({
+                step: { userMessage: aiDecision.reply, expectedResponsePattern: "DYNAMIC_AI_EVALUATION" },
+                actualResponse: '',
+                passed: false,
+                latencyMs: Date.now() - startTime,
+                error: e.message
+            });
+            throw new Error(`Bot failed to respond: ${e.message}`);
+        }
+      }
+
+      if (turnCount >= MAX_TURNS && !isFinished) {
+         finalStatus = 'fail';
+         throw new Error("Autonomous run hit maximum turns without completing objective.");
+      }
+
+      return this.buildResult(runId, scriptShell, conversationId, startedAt, new Date().toISOString(), stepResults, transcript, finalStatus, undefined);
+
+    } catch (err: any) {
+      console.error('[TestRunner] Autonomous fatal error:', err.message);
+      this.onStatusChange?.(`Error: ${err.message}`);
+      return this.buildResult(runId, scriptShell, conversationId, startedAt, new Date().toISOString(), stepResults, transcript, 'error', err.message);
+    } finally {
+      if (conversationId && !(window as any).SENTINEL_DEBUG_KEEP_ALIVE) {
+        try {
+          this.onStatusChange?.('Ending conversation…');
+          await this.connector.endConversation(conversationId);
+        } catch (err) {}
+      }
+    }
   }
 
   // ─── Step Execution ──────────────────────────────────────
