@@ -70,16 +70,8 @@ export class TestRunner {
         await fetch(`http://localhost:3001/api/messages/${conversationId}`, { method: 'DELETE' });
       } catch {}
 
-      this.onStatusChange?.('Awaiting initial bot greeting…');
-      try {
-        // Wait briefly for proactive greeting using greetStart as the rigid chronologer baseline
-        const greeting = await this.connector.awaitBotResponse(conversationId, 10000, 1000, greetStart);
-        initialGreetingMs = Date.now() - greetStart;
-        transcript.push({ role: 'bot', content: greeting, timestamp: new Date().toISOString() });
-        this.onTranscriptUpdate?.([...transcript]);
-      } catch (err) {
-        console.log('[TestRunner] No proactive greeting detected, proceeding to steps.');
-      }
+      // TalkDesk does NOT originate a proactive greeting unless prompted. 
+      // It will structurally bundle it automatically with the first interaction cycle natively.
 
       // Step 3: Execute each test step
       for (let i = 0; i < script.steps.length; i++) {
@@ -193,17 +185,6 @@ export class TestRunner {
         });
       } catch {}
 
-      this.onStatusChange?.('Awaiting initial bot greeting…');
-      let initialGreetingMs = 0;
-      try {
-        const greeting = await this.connector.awaitBotResponse(conversationId, 10000, 1000, greetStart);
-        initialGreetingMs = Date.now() - greetStart;
-        transcript.push({ role: 'bot', content: greeting, timestamp: new Date().toISOString() });
-        this.onTranscriptUpdate?.([...transcript]);
-      } catch (err) {
-        console.log('[TestRunner] No proactive greeting detected in autonomous, proceeding.');
-      }
-
       // Dynamic loop
       // Dynamically load gemini generator to avoid circular deps up top
       const { generateDynamicReply } = await import('./gemini-api');
@@ -241,7 +222,7 @@ export class TestRunner {
         // 3. Wait for bot reply
         this.onStatusChange?.(`Turn ${turnCount}: Waiting for bot response…`);
         try {
-            const botResponse = await this.connector.awaitBotResponse(conversationId, 120000, 1000, startTime);
+            const botResponse = await this.connector.awaitBotResponse(conversationId, 120000, 1000);
             transcript.push({
                 role: 'bot',
                 content: botResponse,
@@ -310,7 +291,7 @@ export class TestRunner {
       // Poll for bot response via the local webhooks server
       this.onStatusChange?.(`Step ${stepIndex + 1}: Waiting for bot response…`);
       const timeoutMs = step.timeoutMs || 120000; // Increased default to 120s
-      const botResponse = await this.connector.awaitBotResponse(conversationId, timeoutMs, 1000, startTime);
+      const botResponse = await this.connector.awaitBotResponse(conversationId, timeoutMs, 1000);
 
       const latencyMs = Date.now() - startTime;
 

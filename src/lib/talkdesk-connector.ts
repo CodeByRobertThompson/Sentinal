@@ -26,6 +26,7 @@ export class TalkdeskConnector {
 
   private accessToken: string | null = null;
   private tokenExpiry: number | null = null;
+  private cursor: Record<string, number> = {};
 
   constructor(private config: TalkdeskConfig) {
     // If a pre-issued bearer token was provided (and it's not a placeholder), use it immediately
@@ -157,7 +158,12 @@ export class TalkdeskConnector {
       throw new Error(`Failed to start conversation (${res.status}): ${err}`);
     }
 
-    return res.json() as Promise<TalkdeskConversation>;
+    const conversation = await res.json() as TalkdeskConversation;
+    // Wipe the local array cursor for this new session
+    if (conversation && conversation.id) {
+       this.cursor[conversation.id] = 0;
+    }
+    return conversation;
   }
 
   // ─── Digital Connect: Messages ──────────────────────────
@@ -239,10 +245,10 @@ export class TalkdeskConnector {
   public async awaitBotResponse(
     conversationId: string,
     maxWaitMs = 15000,
-    pollIntervalMs = 1000,
-    pollingStartTime?: number
+    pollIntervalMs = 1000
   ): Promise<string> {
-    const startTime = pollingStartTime || Date.now();
+    const startTime = Date.now();
+    const cursorIndex = this.cursor[conversationId] || 0;
 
     while (Date.now() - startTime < maxWaitMs) {
       try {
@@ -262,25 +268,54 @@ export class TalkdeskConnector {
           const json = await res.json();
           const messages = json.data || json;
           
-          if (messages && messages.length > 0) {
-            console.log('[TalkDesk] Webhook Server returned messages:', messages);
+          if (messages && messages.length > cursorIndex) {
+            console.log(`[TalkDesk] Webhook Check: Server holds ${messages.length} messages (Cursor: ${cursorIndex})`);
           }
 
-          // Search from newest to oldest to ensure we always grab the freshest reply.
-          // By exclusively utilizing `m.received_at` generated locally by the Webhook Server, we completely nullify
-          // any risk of TalkDesk Cloud server clock synchronization skew drifting into the future and spoofing chronologies.
-          const botReply = [...messages].reverse().find(
+          // Strict Memory Array Indexing — Completely Nullifies Clock Skew!
+          // We solely evaluate messages received *after* our saved array length cursor index.
+          const newBotMessages = messages.slice(cursorIndex).filter(
             (m: any) => {
               const senderType = m.sender_type || m.SenderType;
-              const localReceiptTime = m.received_at;
-              
-              const timeValid = localReceiptTime ? localReceiptTime >= startTime : false;
-              return senderType?.toLowerCase() === 'bot' && timeValid;
+              return senderType?.toLowerCase() === 'bot';
             }
           );
 
-          if (botReply) {
-            return botReply.content || botReply.Content;
+          if (newBotMessages.length > 0) {
+            // Once we detect the initial webhook packet, Talkdesk might still be typing/processing the next node.
+            // We implement a strategic 2000ms debounce buffer to wait for any trailing packets.
+            await new Promise(resolve => setTimeout(resolve, 2000));
+            
+            // Perform one final sync with the Webhook Server to pull the absolutized tail end of the sequence.
+            const debounceRes = await fetch(isVercel ? '/api/proxy' : targetEndpoint, {
+              method: 'GET',
+              headers: { 
+                'ngrok-skip-browser-warning': 'true',
+                'x-target-url': targetEndpoint
+              }
+            });
+            
+            if (debounceRes.ok) {
+               const finalJson = await debounceRes.json();
+               const finalMsgs = finalJson.data || finalJson;
+               
+               // Advance cursor strictly past these new messages indefinitely
+               this.cursor[conversationId] = finalMsgs.length;
+               
+               const finalBotSequence = finalMsgs.slice(cursorIndex).filter(
+                 (m: any) => {
+                   const sType = m.sender_type || m.SenderType;
+                   return sType?.toLowerCase() === 'bot';
+                 }
+               );
+               
+               // Combine all staggered message chunks into one cohesive transcript block
+               return finalBotSequence.map((m: any) => m.content || m.Content).join('\n\n');
+            }
+
+            // Fallback if final fetch fails
+            this.cursor[conversationId] = messages.length;
+            return newBotMessages.map((m: any) => m.content || m.Content).join('\n\n');
           }
         }
       } catch (err: any) {
