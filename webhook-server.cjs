@@ -46,7 +46,8 @@ app.post(['/webhook/talkdesk', '/webchat'], (req, res) => {
     conversationMessages[conversationId].push({
       content,
       sender_type: senderType,
-      created_at: createdAt
+      created_at: createdAt,
+      received_at: Date.now()
     });
 
     console.log(`[Webhook Server] Captured message for ${conversationId}: "${content}"`);

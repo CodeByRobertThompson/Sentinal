@@ -265,14 +265,15 @@ export class TalkdeskConnector {
             console.log('[TalkDesk] Webhook Server returned messages:', messages);
           }
 
-          // Find a bot message that was received after we started polling
-          const botReply = messages.find(
+          // Search from newest to oldest to ensure we always grab the freshest reply.
+          // By exclusively utilizing `m.received_at` generated locally by the Webhook Server, we completely nullify
+          // any risk of TalkDesk Cloud server clock synchronization skew drifting into the future and spoofing chronologies.
+          const botReply = [...messages].reverse().find(
             (m: any) => {
               const senderType = m.sender_type || m.SenderType;
-              const timestamp = m.created_at || m.Timestamp || m.timestamp || new Date().toISOString();
+              const localReceiptTime = m.received_at;
               
-              // Only consider it if it's from the bot. (We skip timestamp validation temporarily if missing)
-              const timeValid = timestamp ? new Date(timestamp).getTime() >= startTime : true;
+              const timeValid = localReceiptTime ? localReceiptTime >= startTime : false;
               return senderType?.toLowerCase() === 'bot' && timeValid;
             }
           );
