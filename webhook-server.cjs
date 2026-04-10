@@ -72,6 +72,45 @@ app.listen(port, () => {
   console.log(`🚀 Webhook server running on http://localhost:${port}`);
   console.log(`   - Frontend polling UI: http://localhost:${port}/api/messages/:conversationId`);
   console.log(`   - Webhook ingress URL: http://localhost:${port}/webhook/talkdesk`);
+  console.log(`   - Talkdesk REST Proxy: http://localhost:${port}/proxy/talkdesk`);
   console.log(`\nTo expose to internet, run: ngrok http ${port}`);
   console.log(`=================================================\n`);
+});
+
+// ─── Native NodeJS Proxy for Vercel ─────────────────────────
+// This bypasses Vercel's Host header preservation which historically causes Talkdesk 404s
+app.all('/proxy/talkdesk/*', async (req, res) => {
+  try {
+    const isAuth = req.path.includes('/oauth/token');
+    const targetUrl = isAuth 
+      ? `https://${req.headers['x-account'] || 'wafd-sb'}.talkdeskid.com/oauth/token`
+      : `https://api.talkdeskapp.com${req.path.replace('/proxy/talkdesk', '')}`;
+      
+    const options = {
+      method: req.method,
+      headers: {
+        'Authorization': req.headers.authorization,
+        'Content-Type': req.headers['content-type'],
+        'x-idempotency-key': req.headers['x-idempotency-key'],
+      }
+    };
+    
+    // Purge undefined headers to prevent node fetch errors
+    Object.keys(options.headers).forEach(k => options.headers[k] === undefined && delete options.headers[k]);
+
+    if (['POST', 'PUT', 'PATCH'].includes(req.method)) {
+      options.body = req.body && Object.keys(req.body).length > 0 ? JSON.stringify(req.body) : undefined;
+      // Handle x-www-form-urlencoded for OAuth mapping seamlessly
+      if (req.headers['content-type'] === 'application/x-www-form-urlencoded') {
+         options.body = new URLSearchParams(req.body).toString();
+      }
+    }
+
+    const response = await fetch(targetUrl, options);
+    const data = await response.text();
+    
+    res.status(response.status).send(data);
+  } catch (err) {
+    res.status(500).json({ error: 'Proxy failed', details: err.message });
+  }
 });

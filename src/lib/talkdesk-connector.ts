@@ -14,7 +14,16 @@ import type {
  *   4. Poll for bot/agent responses
  */
 export class TalkdeskConnector {
-  private readonly baseUrl = '/api/talkdesk';
+  private get baseUrl(): string {
+    const webhookUrl = (import.meta as any).env.VITE_WEBHOOK_URL;
+    return webhookUrl ? `${webhookUrl}/proxy/talkdesk` : '/api/talkdesk';
+  }
+
+  private get authUrl(): string {
+    const webhookUrl = (import.meta as any).env.VITE_WEBHOOK_URL;
+    return webhookUrl ? `${webhookUrl}/proxy/talkdesk/oauth/token` : '/api/talkdesk-auth/oauth/token';
+  }
+
   private accessToken: string | null = null;
   private tokenExpiry: number | null = null;
 
@@ -57,7 +66,7 @@ export class TalkdeskConnector {
     });
 
     // OAuth endpoint is on a SEPARATE domain: {account}.talkdeskid.com
-    const authUrl = `/api/talkdesk-auth/oauth/token`;
+    const authUrl = this.authUrl;
 
     console.log('[TalkDesk] Authenticating via OAuth...', { account: this.config.accountName });
 
