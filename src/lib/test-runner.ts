@@ -167,7 +167,10 @@ export class TestRunner {
       
       try {
         const webhookUrl = (import.meta as any).env.VITE_WEBHOOK_URL || 'http://localhost:3001';
-        await fetch(`${webhookUrl}/api/messages/${conversationId}`, { method: 'DELETE' });
+        await fetch(`${webhookUrl}/api/messages/${conversationId}`, { 
+           method: 'DELETE',
+           headers: { 'ngrok-skip-browser-warning': 'true' }
+        });
       } catch {}
 
       // Dynamic loop

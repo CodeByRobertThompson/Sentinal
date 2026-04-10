@@ -4,7 +4,10 @@ const cors = require('cors');
 const app = express();
 const port = 3001;
 
-app.use(cors());
+app.use(cors({
+  origin: '*',
+  allowedHeaders: ['Content-Type', 'Authorization', 'x-account', 'x-idempotency-key', 'ngrok-skip-browser-warning']
+}));
 app.use(express.json()); // body parser
 
 // In-memory store for received messages mapped by conversation_id

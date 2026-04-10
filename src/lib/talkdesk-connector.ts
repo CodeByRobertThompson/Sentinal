@@ -75,6 +75,7 @@ export class TalkdeskConnector {
       headers: {
         'Content-Type': 'application/x-www-form-urlencoded',
         'Authorization': `Basic ${basicAuth}`,
+        'ngrok-skip-browser-warning': 'true'
       },
       body: body.toString()
     });
@@ -227,7 +228,10 @@ export class TalkdeskConnector {
       try {
         const webhookUrl = (import.meta as any).env.VITE_WEBHOOK_URL || 'http://localhost:3001';
         // Polling the webhook server directly (dynamically handles Vercel -> Ngrok routing)
-        const res = await fetch(`${webhookUrl}/api/messages/${conversationId}`);
+        const res = await fetch(`${webhookUrl}/api/messages/${conversationId}`, {
+          method: 'GET',
+          headers: { 'ngrok-skip-browser-warning': 'true' }
+        });
 
         if (res.ok) {
           const json = await res.json();
@@ -273,7 +277,8 @@ export class TalkdeskConnector {
     return {
       Authorization: `Bearer ${this.accessToken}`,
       'Content-Type': 'application/json',
-      'x-account': this.config.accountName
+      'x-account': this.config.accountName,
+      'ngrok-skip-browser-warning': 'true'
     };
   }
 }

@@ -486,7 +486,10 @@ export function TestRunnerPanel() {
       const webhookUrl = (import.meta as any).env.VITE_WEBHOOK_URL || 'http://localhost:3001';
       await fetch(`${webhookUrl}/webhook/talkdesk`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'ngrok-skip-browser-warning': 'true' 
+        },
         body: JSON.stringify({
           conversation_id: convId,
           content: "Sentinel Debug: Bot responded correctly via simulation.",
