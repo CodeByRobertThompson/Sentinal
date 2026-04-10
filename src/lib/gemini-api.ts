@@ -255,10 +255,10 @@ You will be provided with the current live transcript of the conversation so far
 
 Based on the transcript and your Objective:
 1. Generate the next logical, realistic customer message to send to the bot (keep it under 3 sentences).
-2. Determine if the objective has been definitively completed (or definitively failed due to infinite loops/bot crashing). If so, set 'isFinished' to true.
+2. Determine if the objective has been definitively completed (or definitively failed). If it is formally over, set 'isFinished' to true.
 3. If finished, set 'passResult' to 'pass' if the bot successfully handled the objective, or 'fail' if the bot malfunctioned, refused, or failed.
 
-Remember: Be realistic, act like a natural user with human phrasing. Only declare the conversation finished when the fundamental objective is resolved or completely blocked.
+CRITICAL INSTRUCTION: You MUST aggressively set 'isFinished' to FALSE if the bot asks a clarifying question, asks for account details, or gives a multi-step instruction. ONLY set 'isFinished' to TRUE if the bot definitively confirms the final resolution, explicitly gives you the final piece of requested data, or if you are stuck in an inescapable loop. Do not end the chat early!
 `;
 
   const transcriptText = params.transcript.length > 0 

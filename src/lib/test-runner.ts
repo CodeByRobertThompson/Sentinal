@@ -159,8 +159,9 @@ export class TestRunner {
       await this.connector.authenticate();
 
       this.onStatusChange?.('Starting autonomous conversation…');
-      // Use the exact spelling and formatting from the user's working script
-      const subject = `Sentinal Test: ${objective.substring(0, 60)}`;
+      // Enforce the exact identical Subject Line structure as runScript (which successfully routed to Autopilot)
+      // specifically matching the 'Sentinel Test: ' prefix with an 'e'. 
+      const subject = `Sentinel Test: Autonomous AI Run — ${objective.substring(0, 80)}`;
       const conversation = await this.connector.startConversation(subject);
       conversationId = conversation.id;
       
@@ -171,9 +172,6 @@ export class TestRunner {
       // Dynamic loop
       // Dynamically load gemini generator to avoid circular deps up top
       const { generateDynamicReply } = await import('./gemini-api');
-
-      // Do NOT send 'Hello'. Instead immediately consult Gemini for a potent conversational opener.
-      // This guarantees Talkdesk NLP hits an explicit Intent rather than falling back to the queue default framework.
 
       let isFinished = false;
       let finalStatus: 'pass' | 'fail' | 'error' = 'error';
