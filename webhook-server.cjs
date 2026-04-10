@@ -82,12 +82,12 @@ app.listen(port, () => {
 
 // ─── Native NodeJS Proxy for Vercel ─────────────────────────
 // This bypasses Vercel's Host header preservation which historically causes Talkdesk 404s
-app.all('/proxy/talkdesk(.*)', async (req, res) => {
+app.use('/proxy/talkdesk', async (req, res) => {
   try {
     const isAuth = req.path.includes('/oauth/token');
     const targetUrl = isAuth 
       ? `https://${req.headers['x-account'] || 'wafd-sb'}.talkdeskid.com/oauth/token`
-      : `https://api.talkdeskapp.com${req.path.replace('/proxy/talkdesk', '')}`;
+      : `https://api.talkdeskapp.com${req.path}`;
       
     const options = {
       method: req.method,
