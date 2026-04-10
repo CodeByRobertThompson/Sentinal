@@ -49,7 +49,6 @@ export class TestRunner {
     const stepResults: TestStepResult[] = [];
     const transcript: TranscriptEntry[] = [];
     let conversationId = '';
-    let initialGreetingMs = 0;
 
     try {
       // Step 1: Authenticate
@@ -59,7 +58,6 @@ export class TestRunner {
       // Measure Initial Greeting Latency
       // We log start time explicitly before startConversation completes so we don't miss instant backend routing signals
       this.onStatusChange?.('Starting conversation…');
-      const greetStart = Date.now();
       const subject = `Sentinel Test: ${script.name}${script.description ? ` — ${script.description}` : ''}`;
       const conversation = await this.connector.startConversation(subject);
       conversationId = conversation.id;
@@ -137,7 +135,7 @@ export class TestRunner {
     const status = allPassed ? 'pass' : 'fail';
     this.onStatusChange?.(`Complete — ${status.toUpperCase()}`);
 
-    return this.buildResult(runId, script, conversationId, startedAt, completedAt, stepResults, transcript, status, undefined, initialGreetingMs);
+    return this.buildResult(runId, script, conversationId, startedAt, completedAt, stepResults, transcript, status, undefined, 0);
   }
 
   // ─── Autonomous Execution ────────────────────────────────
@@ -164,7 +162,6 @@ export class TestRunner {
 
       // Measure Initial Greeting Latency safely
       this.onStatusChange?.('Starting autonomous conversation…');
-      const greetStart = Date.now();
       // Enforce the exact identical Subject Line structure as runScript (which successfully routed to Autopilot)
       // specifically matching the 'Sentinel Test: ' prefix with an 'e'. 
       const subject = `Sentinel Test: Autonomous AI Run — ${objective.substring(0, 80)}`;
@@ -255,7 +252,7 @@ export class TestRunner {
          throw new Error("Autonomous run hit maximum turns without completing objective.");
       }
 
-      return this.buildResult(runId, scriptShell, conversationId, startedAt, new Date().toISOString(), stepResults, transcript, finalStatus, undefined, initialGreetingMs);
+      return this.buildResult(runId, scriptShell, conversationId, startedAt, new Date().toISOString(), stepResults, transcript, finalStatus, undefined, 0);
 
     } catch (err: any) {
       console.error('[TestRunner] Autonomous fatal error:', err.message);
