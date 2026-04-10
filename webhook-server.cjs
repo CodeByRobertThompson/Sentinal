@@ -8,7 +8,8 @@ app.use(cors({
   origin: '*',
   allowedHeaders: ['Content-Type', 'Authorization', 'x-account', 'x-idempotency-key', 'ngrok-skip-browser-warning']
 }));
-app.use(express.json()); // body parser
+app.use(express.json()); // body parser for standard Talkdesk Conversations API
+app.use(express.urlencoded({ extended: true })); // Form parser exclusively for Talkdesk OAuth
 
 // In-memory store for received messages mapped by conversation_id
 // Structure: { [conversationId: string]: Array<{ content: string, sender_type: string, created_at: string }> }
