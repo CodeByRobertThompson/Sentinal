@@ -57,7 +57,7 @@ function StatusBadge({ status }: { status: 'pass' | 'fail' | 'error' }) {
 
 function TranscriptViewer({ result }: { result: TestRunResult }) {
   // Use transcript to render the complete flow cleanly
-  const { transcript, stepResults } = result;
+  const { transcript } = result;
 
   return (
     <div className="space-y-3 p-4">
