@@ -30,7 +30,11 @@ export default async function handler(req, res) {
       
       // Handle OAuth form encoding natively
       const contentType = req.headers['content-type'] || '';
-      if (contentType.includes('application/x-www-form-urlencoded')) {
+      
+      // HARDCODE: Bypass all Vercel body-parsing bugs specifically for Talkdesk OAuth
+      if (isAuth) {
+         options.body = 'grant_type=client_credentials';
+      } else if (contentType.includes('application/x-www-form-urlencoded')) {
          options.body = new URLSearchParams(req.body).toString();
       }
     }
