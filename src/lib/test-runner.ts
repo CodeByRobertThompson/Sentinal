@@ -49,6 +49,7 @@ export class TestRunner {
     const stepResults: TestStepResult[] = [];
     const transcript: TranscriptEntry[] = [];
     let conversationId = '';
+    let initialGreetingMs = 0;
 
     try {
       // Step 1: Authenticate
@@ -69,7 +70,6 @@ export class TestRunner {
 
       // Measure Initial Greeting Latency
       this.onStatusChange?.('Awaiting initial bot greeting…');
-      let initialGreetingMs = 0;
       const greetStart = Date.now();
       try {
         // Wait briefly for proactive greeting
