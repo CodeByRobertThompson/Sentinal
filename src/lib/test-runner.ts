@@ -166,7 +166,8 @@ export class TestRunner {
       conversationId = conversation.id;
       
       try {
-        await fetch(`http://localhost:3001/api/messages/${conversationId}`, { method: 'DELETE' });
+        const webhookUrl = (import.meta as any).env.VITE_WEBHOOK_URL || 'http://localhost:3001';
+        await fetch(`${webhookUrl}/api/messages/${conversationId}`, { method: 'DELETE' });
       } catch {}
 
       // Dynamic loop

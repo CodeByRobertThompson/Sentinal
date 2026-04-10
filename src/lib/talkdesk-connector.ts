@@ -216,8 +216,9 @@ export class TalkdeskConnector {
 
     while (Date.now() - startTime < maxWaitMs) {
       try {
-        // Polling the local Express server directly
-        const res = await fetch(`http://localhost:3001/api/messages/${conversationId}`);
+        const webhookUrl = (import.meta as any).env.VITE_WEBHOOK_URL || 'http://localhost:3001';
+        // Polling the webhook server directly (dynamically handles Vercel -> Ngrok routing)
+        const res = await fetch(`${webhookUrl}/api/messages/${conversationId}`);
 
         if (res.ok) {
           const json = await res.json();

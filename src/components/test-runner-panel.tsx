@@ -483,7 +483,8 @@ export function TestRunnerPanel() {
   const handleSimulateReply = async (convId: string) => {
     if (!convId) return;
     try {
-      await fetch('http://localhost:3001/webhook/talkdesk', {
+      const webhookUrl = (import.meta as any).env.VITE_WEBHOOK_URL || 'http://localhost:3001';
+      await fetch(`${webhookUrl}/webhook/talkdesk`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
