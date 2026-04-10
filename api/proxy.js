@@ -1,54 +1,60 @@
 export default async function handler(req, res) {
-  // A universal anti-CORS proxy executed on Vercel's Node backend.
-  // This physically bypasses Chrome's strict OPTIONS pre-flight requirements 
-  // which violently conflict with ngrok's destructive HTML abuse firewall.
-  
   try {
     const targetUrl = req.headers['x-target-url'];
     if (!targetUrl) return res.status(400).json({ error: 'Missing x-target-url header' });
-    
     const isAuth = targetUrl.includes('/oauth/token');
 
-    const options = {
-      method: req.method,
-      headers: {
-        'Authorization': req.headers['authorization'],
-        'Content-Type': req.headers['content-type'],
-        'x-account': req.headers['x-account'],
-        'x-idempotency-key': req.headers['x-idempotency-key'],
-        'ngrok-skip-browser-warning': 'true'
-      }
+    // Build pure, untainted headers
+    const headers = {
+      'Authorization': req.headers['authorization'],
+      'x-account': req.headers['x-account'],
+      'x-idempotency-key': req.headers['x-idempotency-key'],
+      'ngrok-skip-browser-warning': 'true'
     };
 
-    // Purge undefined headers to prevent node-fetch crashes
-    Object.keys(options.headers).forEach(k => {
-      if (!options.headers[k]) delete options.headers[k];
+    // Purge undefined
+    Object.keys(headers).forEach(k => {
+      if (!headers[k]) delete headers[k];
     });
 
-    if (['POST', 'PUT', 'PATCH'].includes(req.method)) {
-      if (req.body) {
-        options.body = typeof req.body === 'object' ? JSON.stringify(req.body) : req.body;
-      }
-      
-      // Handle OAuth form encoding natively
-      const contentType = req.headers['content-type'] || '';
-      
-      // HARDCODE: Bypass all Vercel body-parsing bugs specifically for Talkdesk OAuth
-      if (isAuth) {
-         options.body = 'grant_type=client_credentials';
-      } else if (contentType.includes('application/x-www-form-urlencoded')) {
-         options.body = new URLSearchParams(req.body).toString();
-      }
+    // 1. OAUTH ROUTING (Strict URL-Encoded handling)
+    if (isAuth) {
+      headers['Content-Type'] = 'application/x-www-form-urlencoded';
+      const bodyParams = new URLSearchParams();
+      bodyParams.append('grant_type', 'client_credentials');
+
+      const response = await fetch(targetUrl, {
+        method: 'POST',
+        headers,
+        body: bodyParams
+      });
+      return res.status(response.status).send(await response.text());
     }
 
-    const targetResponse = await fetch(targetUrl, options);
-    
-    // Attempt to pass back exact text/json
-    const data = await targetResponse.text();
-    res.status(targetResponse.status).send(data);
+    // 2. STANDARD JSON ROUTING (Conversations API & Ngrok API)
+    if (['POST', 'PUT', 'PATCH'].includes(req.method)) {
+      headers['Content-Type'] = 'application/json';
+      
+      // Vercel intelligently parses incoming JSON, we strictly rebuild it
+      const stringifiedBody = typeof req.body === 'object' ? JSON.stringify(req.body) : req.body;
+
+      const response = await fetch(targetUrl, {
+        method: req.method,
+        headers,
+        body: stringifiedBody
+      });
+      return res.status(response.status).send(await response.text());
+    }
+
+    // 3. GET/DELETE ROUTING (Session cleanup & Webhook polling)
+    const response = await fetch(targetUrl, {
+      method: req.method,
+      headers
+    });
+    return res.status(response.status).send(await response.text());
 
   } catch (err) {
-    console.error('Vercel Serverless Proxy Error:', err);
-    res.status(500).json({ error: 'Vercel Serverless Proxy Failed', details: err.message });
+    console.error('Vercel Node Fetch Error:', err);
+    res.status(500).json({ error: 'Proxy Failure', details: err.message });
   }
 }
