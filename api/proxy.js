@@ -29,7 +29,8 @@ export default async function handler(req, res) {
       }
       
       // Handle OAuth form encoding natively
-      if (req.headers['content-type'] === 'application/x-www-form-urlencoded') {
+      const contentType = req.headers['content-type'] || '';
+      if (contentType.includes('application/x-www-form-urlencoded')) {
          options.body = new URLSearchParams(req.body).toString();
       }
     }
