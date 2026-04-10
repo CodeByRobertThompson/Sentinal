@@ -6,6 +6,8 @@ export default async function handler(req, res) {
   try {
     const targetUrl = req.headers['x-target-url'];
     if (!targetUrl) return res.status(400).json({ error: 'Missing x-target-url header' });
+    
+    const isAuth = targetUrl.includes('/oauth/token');
 
     const options = {
       method: req.method,
