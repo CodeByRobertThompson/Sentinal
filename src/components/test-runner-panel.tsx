@@ -1,7 +1,7 @@
 import { useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
-  Sparkles, Play, Loader2, CheckCircle2, XCircle, AlertCircle,
+  Play, Loader2, CheckCircle2, XCircle, AlertCircle,
   ChevronDown, ChevronRight, MessageSquare, Clock, Zap,
   Bot, User, RotateCcw, Trash2
 } from 'lucide-react';
@@ -13,10 +13,10 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
-import { Slider } from '@/components/ui/slider';
+
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { toast } from 'sonner';
-import { generateTestScripts } from '@/lib/gemini-api';
+
 import { TestRunner } from '@/lib/test-runner';
 import { createTalkdeskConnector } from '@/lib/talkdesk-connector';
 import type { TestScript, TestRunResult } from '@/models/test-script-models';
