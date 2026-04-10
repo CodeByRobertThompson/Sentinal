@@ -56,8 +56,10 @@ export class TestRunner {
       this.onStatusChange?.('Authenticating…');
       await this.connector.authenticate();
 
-      // Step 2: Start conversation with a dynamic subject based on the scenario
+      // Measure Initial Greeting Latency
+      // We log start time explicitly before startConversation completes so we don't miss instant backend routing signals
       this.onStatusChange?.('Starting conversation…');
+      const greetStart = Date.now();
       const subject = `Sentinel Test: ${script.name}${script.description ? ` — ${script.description}` : ''}`;
       const conversation = await this.connector.startConversation(subject);
       conversationId = conversation.id;
@@ -68,12 +70,10 @@ export class TestRunner {
         await fetch(`http://localhost:3001/api/messages/${conversationId}`, { method: 'DELETE' });
       } catch {}
 
-      // Measure Initial Greeting Latency
       this.onStatusChange?.('Awaiting initial bot greeting…');
-      const greetStart = Date.now();
       try {
-        // Wait briefly for proactive greeting
-        const greeting = await this.connector.awaitBotResponse(conversationId, 10000, 1000);
+        // Wait briefly for proactive greeting using greetStart as the rigid chronologer baseline
+        const greeting = await this.connector.awaitBotResponse(conversationId, 10000, 1000, greetStart);
         initialGreetingMs = Date.now() - greetStart;
         transcript.push({ role: 'bot', content: greeting, timestamp: new Date().toISOString() });
         this.onTranscriptUpdate?.([...transcript]);
@@ -170,7 +170,9 @@ export class TestRunner {
       this.onStatusChange?.('Authenticating…');
       await this.connector.authenticate();
 
+      // Measure Initial Greeting Latency safely
       this.onStatusChange?.('Starting autonomous conversation…');
+      const greetStart = Date.now();
       // Enforce the exact identical Subject Line structure as runScript (which successfully routed to Autopilot)
       // specifically matching the 'Sentinel Test: ' prefix with an 'e'. 
       const subject = `Sentinel Test: Autonomous AI Run — ${objective.substring(0, 80)}`;
@@ -191,12 +193,10 @@ export class TestRunner {
         });
       } catch {}
 
-      // Measure Initial Greeting Latency
       this.onStatusChange?.('Awaiting initial bot greeting…');
       let initialGreetingMs = 0;
-      const greetStart = Date.now();
       try {
-        const greeting = await this.connector.awaitBotResponse(conversationId, 10000, 1000);
+        const greeting = await this.connector.awaitBotResponse(conversationId, 10000, 1000, greetStart);
         initialGreetingMs = Date.now() - greetStart;
         transcript.push({ role: 'bot', content: greeting, timestamp: new Date().toISOString() });
         this.onTranscriptUpdate?.([...transcript]);
@@ -241,7 +241,7 @@ export class TestRunner {
         // 3. Wait for bot reply
         this.onStatusChange?.(`Turn ${turnCount}: Waiting for bot response…`);
         try {
-            const botResponse = await this.connector.awaitBotResponse(conversationId, 120000, 1000);
+            const botResponse = await this.connector.awaitBotResponse(conversationId, 120000, 1000, startTime);
             transcript.push({
                 role: 'bot',
                 content: botResponse,
@@ -310,7 +310,7 @@ export class TestRunner {
       // Poll for bot response via the local webhooks server
       this.onStatusChange?.(`Step ${stepIndex + 1}: Waiting for bot response…`);
       const timeoutMs = step.timeoutMs || 120000; // Increased default to 120s
-      const botResponse = await this.connector.awaitBotResponse(conversationId, timeoutMs, 1000);
+      const botResponse = await this.connector.awaitBotResponse(conversationId, timeoutMs, 1000, startTime);
 
       const latencyMs = Date.now() - startTime;
 

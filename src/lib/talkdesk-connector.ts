@@ -239,9 +239,10 @@ export class TalkdeskConnector {
   public async awaitBotResponse(
     conversationId: string,
     maxWaitMs = 15000,
-    pollIntervalMs = 1000
+    pollIntervalMs = 1000,
+    pollingStartTime?: number
   ): Promise<string> {
-    const startTime = Date.now();
+    const startTime = pollingStartTime || Date.now();
 
     while (Date.now() - startTime < maxWaitMs) {
       try {
