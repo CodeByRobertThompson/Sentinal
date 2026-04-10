@@ -601,6 +601,9 @@ export function TestRunnerPanel() {
               Live Test Runner
             </CardTitle>
             <div className="flex items-center gap-2">
+              <div className="text-[10px] font-mono text-white/40 mr-4 whitespace-nowrap">
+                TARGET: {(import.meta as any).env.VITE_WEBHOOK_URL || 'localhost:3001'}
+              </div>
               {totalRuns > 0 && (
                 <div className="flex items-center gap-3 mr-4 text-white/80 text-xs">
                   <span><span className="font-semibold text-white">{totalRuns}</span> ran</span>
