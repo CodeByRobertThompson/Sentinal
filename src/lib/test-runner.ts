@@ -166,10 +166,16 @@ export class TestRunner {
       conversationId = conversation.id;
       
       try {
+        const isVercel = !!(import.meta as any).env.VITE_WEBHOOK_URL;
         const webhookUrl = (import.meta as any).env.VITE_WEBHOOK_URL || 'http://localhost:3001';
-        await fetch(`${webhookUrl}/api/messages/${conversationId}`, { 
+        const targetEndpoint = `${webhookUrl}/api/messages/${conversationId}`;
+
+        await fetch(isVercel ? '/api/proxy' : targetEndpoint, { 
            method: 'DELETE',
-           headers: { 'ngrok-skip-browser-warning': 'true' }
+           headers: { 
+             'ngrok-skip-browser-warning': 'true',
+             ...(isVercel ? { 'x-target-url': targetEndpoint } : {})
+           }
         });
       } catch {}
 

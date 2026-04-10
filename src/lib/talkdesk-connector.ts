@@ -70,12 +70,17 @@ export class TalkdeskConnector {
 
     console.log('[TalkDesk] Authenticating via OAuth...', { account: this.config.accountName });
 
-    const res = await fetch(authUrl, {
+    // Use the native Vercel Edge proxy to completely blindside Chrome's CORS engine
+    const isVercel = !!(import.meta as any).env.VITE_WEBHOOK_URL;
+    const fetchTarget = isVercel ? '/api/proxy' : authUrl;
+
+    const res = await fetch(fetchTarget, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/x-www-form-urlencoded',
         'Authorization': `Basic ${basicAuth}`,
-        'ngrok-skip-browser-warning': 'true'
+        'ngrok-skip-browser-warning': 'true',
+        ...(isVercel ? { 'x-target-url': authUrl } : {})
       },
       body: body.toString()
     });
@@ -134,9 +139,15 @@ export class TalkdeskConnector {
       console.log('[TalkDesk] Conversation subject:', subject);
     }
 
-    const res = await fetch(`${this.baseUrl}/digital-connect/conversations`, {
+    const isVercel = !!(import.meta as any).env.VITE_WEBHOOK_URL;
+    const targetEndpoint = `${this.baseUrl}/digital-connect/conversations`;
+
+    const res = await fetch(isVercel ? '/api/proxy' : targetEndpoint, {
       method: 'POST',
-      headers,
+      headers: {
+        ...headers,
+        ...(isVercel ? { 'x-target-url': targetEndpoint } : {})
+      },
       body: JSON.stringify(requestBody)
     });
 
@@ -165,13 +176,15 @@ export class TalkdeskConnector {
 
     console.log(`[TalkDesk] Sending message to ${conversationId}: "${text}" (Key: ${idempotencyKey})`);
 
-    const res = await fetch(
-      `${this.baseUrl}/digital-connect/conversations/${conversationId}/messages`,
-      {
+    const isVercel = !!(import.meta as any).env.VITE_WEBHOOK_URL;
+    const targetEndpoint = `${this.baseUrl}/digital-connect/conversations/${conversationId}/messages`;
+
+    const res = await fetch(isVercel ? '/api/proxy' : targetEndpoint, {
         method: 'POST',
         headers: {
           ...this.buildHeaders() as Record<string, string>,
           'x-idempotency-key': idempotencyKey,
+          ...(isVercel ? { 'x-target-url': targetEndpoint } : {})
         },
         body: JSON.stringify({ content: text })
       }
@@ -197,9 +210,15 @@ export class TalkdeskConnector {
 
     console.log('[TalkDesk] Ending conversation:', conversationId);
 
-    const res = await fetch(`${this.baseUrl}/digital-connect/conversations/${conversationId}`, {
+    const isVercel = !!(import.meta as any).env.VITE_WEBHOOK_URL;
+    const targetEndpoint = `${this.baseUrl}/digital-connect/conversations/${conversationId}`;
+
+    const res = await fetch(isVercel ? '/api/proxy' : targetEndpoint, {
       method: 'DELETE',
-      headers: this.buildHeaders(),
+      headers: {
+        ...this.buildHeaders(),
+        ...(isVercel ? { 'x-target-url': targetEndpoint } : {})
+      }
     });
 
     if (!res.ok && res.status !== 204) {
@@ -227,10 +246,15 @@ export class TalkdeskConnector {
     while (Date.now() - startTime < maxWaitMs) {
       try {
         const webhookUrl = (import.meta as any).env.VITE_WEBHOOK_URL || 'http://localhost:3001';
-        // Polling the webhook server directly (dynamically handles Vercel -> Ngrok routing)
-        const res = await fetch(`${webhookUrl}/api/messages/${conversationId}`, {
+        const isVercel = !!(import.meta as any).env.VITE_WEBHOOK_URL;
+        const targetEndpoint = `${webhookUrl}/api/messages/${conversationId}`;
+
+        const res = await fetch(isVercel ? '/api/proxy' : targetEndpoint, {
           method: 'GET',
-          headers: { 'ngrok-skip-browser-warning': 'true' }
+          headers: { 
+            'ngrok-skip-browser-warning': 'true',
+            ...(isVercel ? { 'x-target-url': targetEndpoint } : {}) 
+          }
         });
 
         if (res.ok) {

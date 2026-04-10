@@ -483,12 +483,16 @@ export function TestRunnerPanel() {
   const handleSimulateReply = async (convId: string) => {
     if (!convId) return;
     try {
+      const isVercel = !!(import.meta as any).env.VITE_WEBHOOK_URL;
       const webhookUrl = (import.meta as any).env.VITE_WEBHOOK_URL || 'http://localhost:3001';
-      await fetch(`${webhookUrl}/webhook/talkdesk`, {
+      const targetEndpoint = `${webhookUrl}/webhook/talkdesk`;
+
+      await fetch(isVercel ? '/api/proxy' : targetEndpoint, {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
-          'ngrok-skip-browser-warning': 'true' 
+          'ngrok-skip-browser-warning': 'true',
+          ...(isVercel ? { 'x-target-url': targetEndpoint } : {})
         },
         body: JSON.stringify({
           conversation_id: convId,
