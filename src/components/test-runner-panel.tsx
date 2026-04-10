@@ -226,32 +226,43 @@ function ScriptCard({ script, result, isRunning, runningStatus, runningProgress,
                     </div>
                   </div>
                 )}
-                {/* Result summary bar */}
-                <div className="flex items-center gap-4 px-4 py-2 bg-muted/20 text-xs">
-                  <span>
-                    <span className="font-semibold text-emerald">{result.passedSteps}</span> passed
-                  </span>
-                  <span>
-                    <span className="font-semibold text-crimson">{result.failedSteps}</span> failed
-                  </span>
-                  <span>
-                    <Zap className="h-3 w-3 inline mr-0.5" />
-                    <span className="font-mono">{result.avgLatencyMs}ms</span> avg latency
-                  </span>
-                  {result.initialGreetingMs !== undefined && result.initialGreetingMs > 0 && (
-                    <span className="text-muted-foreground ml-2">
-                       First-Contact: <span className="font-mono text-foreground font-semibold">{result.initialGreetingMs}ms</span>
-                    </span>
-                  )}
-                  {result.dialogueTurns !== undefined && (
-                    <span className="text-muted-foreground ml-2">
-                      Turns: <span className="font-mono text-foreground">{result.dialogueTurns}</span>
-                    </span>
-                  )}
+                {/* Result Summary Dashboard Grid */}
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 p-4 bg-muted/10 border-b border-border">
+                  <div className="flex flex-col gap-1">
+                    <span className="text-[10px] text-muted-foreground uppercase tracking-wider font-bold">Execution Status</span>
+                    <div className="flex items-center gap-3 text-sm">
+                      <span className="text-emerald font-medium">{result.passedSteps} Passed</span>
+                      <span className="text-crimson font-medium">{result.failedSteps} Failed</span>
+                    </div>
+                  </div>
+                  
+                  <div className="flex flex-col gap-1">
+                    <span className="text-[10px] text-muted-foreground uppercase tracking-wider font-bold">Speed Metrics</span>
+                    <div className="flex items-center gap-1.5 text-sm text-foreground">
+                      <Zap className="h-3.5 w-3.5 text-amber-500" />
+                      <span className="font-mono">{result.avgLatencyMs}ms</span>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-col gap-1">
+                    <span className="text-[10px] text-muted-foreground uppercase tracking-wider font-bold">Engagement Output</span>
+                    <div className="flex items-center gap-3 text-sm text-foreground">
+                      {result.initialGreetingMs !== undefined && result.initialGreetingMs > 0 && (
+                        <span>Greeting: <span className="font-mono font-medium">{result.initialGreetingMs}ms</span></span>
+                      )}
+                      {result.dialogueTurns !== undefined && (
+                        <span>Turns: <span className="font-mono font-medium">{result.dialogueTurns}</span></span>
+                      )}
+                    </div>
+                  </div>
+
                   {result.conversationId && (
-                    <span className="text-muted-foreground ml-auto">
-                      ID: <code className="text-[10px] bg-muted/40 px-1 py-0.5 rounded">{result.conversationId.slice(0, 12)}…</code>
-                    </span>
+                    <div className="flex flex-col gap-1 md:items-end">
+                      <span className="text-[10px] text-muted-foreground uppercase tracking-wider font-bold">Session Identity</span>
+                      <code className="text-[11px] px-1.5 py-0.5 rounded border border-border/50 bg-background font-mono text-muted-foreground">
+                        {result.conversationId}
+                      </code>
+                    </div>
                   )}
                 </div>
                 {result.stepResults.length > 0 && <TranscriptViewer result={result} />}
