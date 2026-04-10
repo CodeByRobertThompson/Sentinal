@@ -1,6 +1,14 @@
 {
   "rewrites": [
     {
+      "source": "/api/talkdesk-auth/:path*",
+      "destination": "https://wafd-sb.talkdeskid.com/:path*"
+    },
+    {
+      "source": "/api/talkdesk/:path*",
+      "destination": "https://api.talkdeskapp.com/:path*"
+    },
+    {
       "source": "/(.*)",
       "destination": "/index.html"
     }
