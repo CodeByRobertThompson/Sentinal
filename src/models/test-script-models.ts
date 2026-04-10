@@ -53,6 +53,10 @@ export interface TestRunResult {
   passedSteps: number;
   failedSteps: number;
   avgLatencyMs: number;
+  /** Performance metric: how fast the bot natively initiated the conversation */
+  initialGreetingMs?: number;
+  /** Volume metric: total depth of the interaction */
+  dialogueTurns: number;
   /** Error message if the run failed at a fatal level (auth, connection, etc.) */
   errorMessage?: string;
 }

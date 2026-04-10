@@ -65,8 +65,20 @@ export class TestRunner {
       // Clear any existing messages for this conversation ID in the webhook server (sanity check)
       try {
         await fetch(`http://localhost:3001/api/messages/${conversationId}`, { method: 'DELETE' });
-      } catch {
-        // Ignore if webhook server unreachable
+      } catch {}
+
+      // Measure Initial Greeting Latency
+      this.onStatusChange?.('Awaiting initial bot greeting…');
+      let initialGreetingMs = 0;
+      const greetStart = Date.now();
+      try {
+        // Wait briefly for proactive greeting
+        const greeting = await this.connector.awaitBotResponse(conversationId, 10000, 1000);
+        initialGreetingMs = Date.now() - greetStart;
+        transcript.push({ role: 'bot', content: greeting, timestamp: new Date().toISOString() });
+        this.onTranscriptUpdate?.([...transcript]);
+      } catch (err) {
+        console.log('[TestRunner] No proactive greeting detected, proceeding to steps.');
       }
 
       // Step 3: Execute each test step
@@ -133,7 +145,7 @@ export class TestRunner {
     const status = allPassed ? 'pass' : 'fail';
     this.onStatusChange?.(`Complete — ${status.toUpperCase()}`);
 
-    return this.buildResult(runId, script, conversationId, startedAt, completedAt, stepResults, transcript, status, undefined);
+    return this.buildResult(runId, script, conversationId, startedAt, completedAt, stepResults, transcript, status, undefined, initialGreetingMs);
   }
 
   // ─── Autonomous Execution ────────────────────────────────
@@ -172,12 +184,25 @@ export class TestRunner {
 
         await fetch(isVercel ? '/api/proxy' : targetEndpoint, { 
            method: 'DELETE',
-           headers: { 
+           headers: {
              'ngrok-skip-browser-warning': 'true',
-             ...(isVercel ? { 'x-target-url': targetEndpoint } : {})
+             'x-target-url': targetEndpoint
            }
         });
       } catch {}
+
+      // Measure Initial Greeting Latency
+      this.onStatusChange?.('Awaiting initial bot greeting…');
+      let initialGreetingMs = 0;
+      const greetStart = Date.now();
+      try {
+        const greeting = await this.connector.awaitBotResponse(conversationId, 10000, 1000);
+        initialGreetingMs = Date.now() - greetStart;
+        transcript.push({ role: 'bot', content: greeting, timestamp: new Date().toISOString() });
+        this.onTranscriptUpdate?.([...transcript]);
+      } catch (err) {
+        console.log('[TestRunner] No proactive greeting detected in autonomous, proceeding.');
+      }
 
       // Dynamic loop
       // Dynamically load gemini generator to avoid circular deps up top
@@ -249,12 +274,12 @@ export class TestRunner {
          throw new Error("Autonomous run hit maximum turns without completing objective.");
       }
 
-      return this.buildResult(runId, scriptShell, conversationId, startedAt, new Date().toISOString(), stepResults, transcript, finalStatus, undefined);
+      return this.buildResult(runId, scriptShell, conversationId, startedAt, new Date().toISOString(), stepResults, transcript, finalStatus, undefined, initialGreetingMs);
 
     } catch (err: any) {
       console.error('[TestRunner] Autonomous fatal error:', err.message);
       this.onStatusChange?.(`Error: ${err.message}`);
-      return this.buildResult(runId, scriptShell, conversationId, startedAt, new Date().toISOString(), stepResults, transcript, 'error', err.message);
+      return this.buildResult(runId, scriptShell, conversationId, startedAt, new Date().toISOString(), stepResults, transcript, 'error', err.message, 0);
     } finally {
       if (conversationId && !(window as any).SENTINEL_DEBUG_KEEP_ALIVE) {
         try {
@@ -349,12 +374,16 @@ export class TestRunner {
     stepResults: TestStepResult[],
     transcript: TranscriptEntry[],
     status: 'pass' | 'fail' | 'error',
-    errorMessage?: string
+    errorMessage?: string,
+    initialGreetingMs?: number
   ): TestRunResult {
     const passedSteps = stepResults.filter((r) => r.passed).length;
     const failedSteps = stepResults.filter((r) => !r.passed).length;
     const totalLatency = stepResults.reduce((sum, r) => sum + r.latencyMs, 0);
     const avgLatencyMs = stepResults.length > 0 ? Math.round(totalLatency / stepResults.length) : 0;
+    
+    // Each Turn equals one User message sent.
+    const dialogueTurns = transcript.filter(t => t.role === 'user').length;
 
     return {
       id: runId,
@@ -370,6 +399,8 @@ export class TestRunner {
       passedSteps,
       failedSteps,
       avgLatencyMs,
+      initialGreetingMs,
+      dialogueTurns,
       errorMessage,
     };
   }

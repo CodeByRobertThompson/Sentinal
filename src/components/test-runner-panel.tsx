@@ -236,11 +236,21 @@ function ScriptCard({ script, result, isRunning, runningStatus, runningProgress,
                   </span>
                   <span>
                     <Zap className="h-3 w-3 inline mr-0.5" />
-                    <span className="font-mono">{result.avgLatencyMs}ms</span> avg
+                    <span className="font-mono">{result.avgLatencyMs}ms</span> avg latency
                   </span>
+                  {result.initialGreetingMs !== undefined && result.initialGreetingMs > 0 && (
+                    <span className="text-muted-foreground ml-2">
+                       First-Contact: <span className="font-mono text-foreground font-semibold">{result.initialGreetingMs}ms</span>
+                    </span>
+                  )}
+                  {result.dialogueTurns !== undefined && (
+                    <span className="text-muted-foreground ml-2">
+                      Turns: <span className="font-mono text-foreground">{result.dialogueTurns}</span>
+                    </span>
+                  )}
                   {result.conversationId && (
-                    <span className="text-muted-foreground">
-                      Conversation: <code className="text-[10px]">{result.conversationId.slice(0, 12)}…</code>
+                    <span className="text-muted-foreground ml-auto">
+                      ID: <code className="text-[10px] bg-muted/40 px-1 py-0.5 rounded">{result.conversationId.slice(0, 12)}…</code>
                     </span>
                   )}
                 </div>
