@@ -80,7 +80,7 @@ export class TalkdeskConnector {
         'Content-Type': 'application/x-www-form-urlencoded',
         'Authorization': `Basic ${basicAuth}`,
         'ngrok-skip-browser-warning': 'true',
-        ...(isVercel ? { 'x-target-url': authUrl } : {})
+        'x-target-url': authUrl 
       },
       body: body.toString()
     });
@@ -146,7 +146,7 @@ export class TalkdeskConnector {
       method: 'POST',
       headers: {
         ...headers,
-        ...(isVercel ? { 'x-target-url': targetEndpoint } : {})
+        'x-target-url': targetEndpoint
       },
       body: JSON.stringify(requestBody)
     });
@@ -184,7 +184,7 @@ export class TalkdeskConnector {
         headers: {
           ...this.buildHeaders() as Record<string, string>,
           'x-idempotency-key': idempotencyKey,
-          ...(isVercel ? { 'x-target-url': targetEndpoint } : {})
+          'x-target-url': targetEndpoint
         },
         body: JSON.stringify({ content: text })
       }
@@ -217,7 +217,7 @@ export class TalkdeskConnector {
       method: 'DELETE',
       headers: {
         ...this.buildHeaders(),
-        ...(isVercel ? { 'x-target-url': targetEndpoint } : {})
+        'x-target-url': targetEndpoint
       }
     });
 
@@ -253,7 +253,7 @@ export class TalkdeskConnector {
           method: 'GET',
           headers: { 
             'ngrok-skip-browser-warning': 'true',
-            ...(isVercel ? { 'x-target-url': targetEndpoint } : {}) 
+            'x-target-url': targetEndpoint
           }
         });
 
