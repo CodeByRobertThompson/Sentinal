@@ -68,7 +68,7 @@ function TranscriptViewer({ result }: { result: TestRunResult }) {
                <User className="h-3 w-3 text-slate-blue" />
              </div>
            )}
-           <div className={`rounded-lg px-3 py-2 text-sm max-w-[85%] ${
+           <div className={`whitespace-pre-wrap rounded-lg px-3 py-2 text-sm max-w-[85%] ${
              entry.role === 'bot' 
                ? 'bg-emerald/10 rounded-tr-none' 
                : 'bg-slate-blue/10 rounded-tl-none'
@@ -98,7 +98,7 @@ function LiveTranscriptViewer({ transcript }: { transcript: any[] }) {
                <User className="h-3 w-3 text-slate-blue" />
              </div>
            )}
-           <div className={`rounded-lg px-3 py-2 text-sm max-w-[85%] ${
+           <div className={`whitespace-pre-wrap rounded-lg px-3 py-2 text-sm max-w-[85%] ${
              entry.role === 'bot' 
                ? 'bg-emerald/10 rounded-tr-none' 
                : 'bg-slate-blue/10 rounded-tl-none'

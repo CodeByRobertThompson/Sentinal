@@ -198,53 +198,59 @@ export class TestRunner {
         this.onStatusChange?.(`Turn ${turnCount}: AI synthesizing next message…`);
         const aiDecision = await generateDynamicReply({ objective, transcript });
         
+        // 2. Send the suggested message if one exists, even if marked finished
+        if (aiDecision.reply) {
+          this.onStatusChange?.(`Turn ${turnCount}: Sending message to Talkdesk…`);
+          const startTime = Date.now();
+          await this.connector.sendMessage(conversationId, aiDecision.reply);
+          
+          transcript.push({
+            role: 'user',
+            content: aiDecision.reply,
+            timestamp: new Date().toISOString()
+          });
+          this.onTranscriptUpdate?.([...transcript]);
+  
+          // 3. Wait for bot reply
+          this.onStatusChange?.(`Turn ${turnCount}: Waiting for bot response…`);
+          try {
+              const botResponse = await this.connector.awaitBotResponse(conversationId, 120000, 1000);
+              transcript.push({
+                  role: 'bot',
+                  content: botResponse,
+                  timestamp: new Date().toISOString()
+              });
+              this.onTranscriptUpdate?.([...transcript]);
+              
+              stepResults.push({
+                  step: { userMessage: aiDecision.reply, expectedResponsePattern: "DYNAMIC_AI_EVALUATION" },
+                  actualResponse: botResponse,
+                  passed: true,
+                  latencyMs: Date.now() - startTime
+              });
+          } catch (e: any) {
+              finalStatus = 'fail';
+              stepResults.push({
+                  step: { userMessage: aiDecision.reply, expectedResponsePattern: "DYNAMIC_AI_EVALUATION" },
+                  actualResponse: '',
+                  passed: false,
+                  latencyMs: Date.now() - startTime,
+                  error: e.message
+              });
+              // Skip throwing strictly if we just wanted to finish so we can gracefully return final results
+              if (!aiDecision.isFinished) throw new Error(`Bot failed to respond: ${e.message}`);
+          }
+        }
+
+        // Evaluate finish flag after executing the final node completely
         if (aiDecision.isFinished) {
            finalStatus = aiDecision.passResult as any;
            this.onStatusChange?.(`AI declared objective finished: ${finalStatus.toUpperCase()}`);
+           isFinished = true;
            break;
         }
 
-        // 2. Send the suggested message
-        this.onStatusChange?.(`Turn ${turnCount}: Sending message to Talkdesk…`);
-        const startTime = Date.now();
-        await this.connector.sendMessage(conversationId, aiDecision.reply);
-        
-        transcript.push({
-          role: 'user',
-          content: aiDecision.reply,
-          timestamp: new Date().toISOString()
-        });
-        this.onTranscriptUpdate?.([...transcript]);
 
-        // 3. Wait for bot reply
-        this.onStatusChange?.(`Turn ${turnCount}: Waiting for bot response…`);
-        try {
-            const botResponse = await this.connector.awaitBotResponse(conversationId, 120000, 1000);
-            transcript.push({
-                role: 'bot',
-                content: botResponse,
-                timestamp: new Date().toISOString()
-            });
-            this.onTranscriptUpdate?.([...transcript]);
-            
-            // Record a step result so we have latency stats
-            stepResults.push({
-                step: { userMessage: aiDecision.reply, expectedResponsePattern: "DYNAMIC_AI_EVALUATION" },
-                actualResponse: botResponse,
-                passed: true,
-                latencyMs: Date.now() - startTime
-            });
-        } catch (e: any) {
-            finalStatus = 'fail';
-            stepResults.push({
-                step: { userMessage: aiDecision.reply, expectedResponsePattern: "DYNAMIC_AI_EVALUATION" },
-                actualResponse: '',
-                passed: false,
-                latencyMs: Date.now() - startTime,
-                error: e.message
-            });
-            throw new Error(`Bot failed to respond: ${e.message}`);
-        }
       }
 
       if (turnCount >= MAX_TURNS && !isFinished) {
