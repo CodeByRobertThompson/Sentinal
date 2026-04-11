@@ -309,13 +309,19 @@ export class TalkdeskConnector {
                  }
                );
                
-               // Combine all staggered message chunks into one cohesive transcript block
-               return finalBotSequence.map((m: any) => m.content || m.Content).join('\n\n');
+               // Combine all staggered message chunks into one cohesive transcript block.
+               // We heavily dedupe the sequence because Talkdesk often broadcast-spams redundant webhook events
+               // (e.g. message.triggered vs message.created) which creates severe echoing in the transcript.
+               const rawContents = finalBotSequence.map((m: any) => m.content || m.Content).filter(Boolean);
+               const uniqueContents = Array.from(new Set(rawContents));
+               
+               return uniqueContents.join('\n\n');
             }
 
             // Fallback if final fetch fails
             this.cursor[conversationId] = messages.length;
-            return newBotMessages.map((m: any) => m.content || m.Content).join('\n\n');
+            const fallbackContents = newBotMessages.map((m: any) => m.content || m.Content).filter(Boolean);
+            return Array.from(new Set(fallbackContents)).join('\n\n');
           }
         }
       } catch (err: any) {
