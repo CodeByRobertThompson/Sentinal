@@ -27,6 +27,7 @@ export class TalkdeskConnector {
   private accessToken: string | null = null;
   private tokenExpiry: number | null = null;
   private cursor: Record<string, number> = {};
+  private seenTimestamps: Record<string, Set<string>> = {};
 
   constructor(private config: TalkdeskConfig) {
     // If a pre-issued bearer token was provided (and it's not a placeholder), use it immediately
@@ -162,6 +163,7 @@ export class TalkdeskConnector {
     // Wipe the local array cursor for this new session
     if (conversation && conversation.id) {
        this.cursor[conversation.id] = 0;
+       this.seenTimestamps[conversation.id] = new Set();
     }
     return conversation;
   }
@@ -305,14 +307,26 @@ export class TalkdeskConnector {
                const finalBotSequence = finalMsgs.slice(cursorIndex).filter(
                  (m: any) => {
                    const sType = m.sender_type || m.SenderType;
-                   return sType?.toLowerCase() === 'bot';
+                   const isBot = sType?.toLowerCase() === 'bot';
+                   if (!isBot) return false;
+                   
+                   // Filter out heavily delayed webhook broadcast duplicates by tracking their native Talkdesk birth timestamps.
+                   // This strictly prevents a "message.delivered" ghost ping arriving 15 seconds late from bleeding into Turn 2.
+                   const tstamp = m.created_at || m.Timestamp;
+                   if (tstamp && this.seenTimestamps[conversationId]?.has(tstamp)) {
+                      return false;
+                   }
+                   if (tstamp && this.seenTimestamps[conversationId]) {
+                      this.seenTimestamps[conversationId].add(tstamp);
+                   }
+                   return true;
                  }
                );
                
                // Combine all staggered message chunks into one cohesive transcript block.
                // We heavily dedupe the sequence because Talkdesk often broadcast-spams redundant webhook events
                // (e.g. message.triggered vs message.created) which creates severe echoing in the transcript.
-               const rawContents = finalBotSequence.map((m: any) => m.content || m.Content).filter(Boolean);
+               const rawContents = finalBotSequence.map((m: any) => (m.content || m.Content || '').trim()).filter(Boolean);
                const uniqueContents = Array.from(new Set(rawContents));
                
                return uniqueContents.join('\n\n');
@@ -320,7 +334,7 @@ export class TalkdeskConnector {
 
             // Fallback if final fetch fails
             this.cursor[conversationId] = messages.length;
-            const fallbackContents = newBotMessages.map((m: any) => m.content || m.Content).filter(Boolean);
+            const fallbackContents = newBotMessages.map((m: any) => (m.content || m.Content || '').trim()).filter(Boolean);
             return Array.from(new Set(fallbackContents)).join('\n\n');
           }
         }
