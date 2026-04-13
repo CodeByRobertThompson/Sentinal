@@ -21,16 +21,16 @@ import { TalkdeskConnector } from './talkdesk-connector';
  *   4. Compile the full transcript and aggregated results
  */
 export class TestRunner {
-  private connector: TalkdeskConnector;
+  private connector: any;
   private onStepComplete?: (stepIndex: number, result: TestStepResult) => void;
   private onStatusChange?: (status: string) => void;
   private onTranscriptUpdate?: (transcript: TranscriptEntry[]) => void;
 
   constructor(
-    connector: TalkdeskConnector,
+    connector: any,
     callbacks?: {
-      onStepComplete?: (stepIndex: number, result: TestStepResult) => void;
       onStatusChange?: (status: string) => void;
+      onStepComplete?: (stepIndex: number, result: TestStepResult) => void;
       onTranscriptUpdate?: (transcript: TranscriptEntry[]) => void;
     }
   ) {

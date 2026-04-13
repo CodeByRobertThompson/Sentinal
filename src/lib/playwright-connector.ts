@@ -43,7 +43,10 @@ export class PlaywrightConnector {
     return {
       id: data.id,
       touchpoint_id: 'playwright-mock-touchpoint',
-    };
+      contact_id: 'playwright-mock',
+      status: 'active',
+      created_at: new Date().toISOString()
+    } as TalkdeskConversation;
   }
 
   // 3. Send Message (Types into Mock Website DOM)
