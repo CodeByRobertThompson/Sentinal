@@ -103,11 +103,9 @@ app.get('/api/browser/:id/messages', async (req, res) => {
         if (text && text.length > 0) {
           let wrapper = el.parentElement;
           let wrapperClasses = '';
-          let depth = 0;
-          while (wrapper && wrapper.tagName.toLowerCase() !== 'body' && depth < 6) {
+          while (wrapper && wrapper.tagName.toLowerCase() !== 'body') {
             wrapperClasses += (wrapper.className || '') + ' ';
             wrapper = wrapper.parentElement;
-            depth++;
           }
           
           messages.push({
