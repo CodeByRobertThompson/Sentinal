@@ -95,7 +95,7 @@ app.get('/api/browser/:id/messages', async (req, res) => {
     // Evaluate the DOM to extract all messages in the chat window.
     const extractedData = await frame.evaluate(() => {
       const messages: { content: string, senderClass: string }[] = [];
-      const contentElements = document.querySelectorAll('[data-chat-bubble-type="text"], .chat-message--content');
+      const contentElements = document.querySelectorAll('[data-chat-bubble-type], .chat-message--content');
       
       contentElements.forEach(el => {
         const text = el.textContent?.trim() || '';

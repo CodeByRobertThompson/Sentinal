@@ -7,7 +7,7 @@ import type {
 } from '../models/test-script-models';
 
 /**
- * TestRunner — Orchestrates end-to-end chatbot testing against Talkdesk.
+ * TestRunner — Orchestrates end-to-end chatbot testing against a Virtual Assistant.
  *
  * Flow:
  *   1. Authenticate (OAuth client_credentials via proxy)
@@ -40,7 +40,7 @@ export class TestRunner {
   }
 
   /**
-   * Execute a full test script against Talkdesk.
+   * Execute a full test script against the Virtual Assistant.
    */
   public async runScript(script: TestScript): Promise<TestRunResult> {
     const runId = crypto.randomUUID();
@@ -66,7 +66,7 @@ export class TestRunner {
         await fetch(`http://localhost:3001/api/messages/${conversationId}`, { method: 'DELETE' });
       } catch {}
 
-      // TalkDesk does NOT originate a proactive greeting unless prompted. 
+      // The Virtual Assistant does NOT originate a proactive greeting unless prompted. 
       // It will structurally bundle it automatically with the first interaction cycle natively.
 
       // Step 3: Execute each test step
@@ -111,7 +111,7 @@ export class TestRunner {
       this.onStatusChange?.(`Error: ${errorMessage}`);
       return this.buildResult(runId, script, conversationId, startedAt, completedAt, stepResults, transcript, 'error', errorMessage);
     } finally {
-      // Step 5: End the conversation to cleanup TalkDesk (unless specifically told to keep it alive)
+      // Step 5: End the conversation to cleanup the backend (unless specifically told to keep it alive)
       // For Sentinel, we'll usually end it, but for debugging we can skip this.
       const shouldKeepAlive = (window as any).SENTINEL_DEBUG_KEEP_ALIVE === true;
       
@@ -160,8 +160,6 @@ export class TestRunner {
 
       // Measure Initial Greeting Latency safely
       this.onStatusChange?.('Starting autonomous conversation…');
-      // Enforce the exact identical Subject Line structure as runScript (which successfully routed to Autopilot)
-      // specifically matching the 'Sentinel Test: ' prefix with an 'e'. 
       const subject = `Sentinel Test: Autonomous AI Run — ${objective.substring(0, 80)}`;
       const conversation = await this.connector.startConversation(subject);
       conversationId = conversation.id;
@@ -214,7 +212,7 @@ export class TestRunner {
         
         // 2. Send the suggested message if one exists, even if marked finished
         if (aiDecision.reply) {
-          this.onStatusChange?.(`Turn ${turnCount}: Sending message to Talkdesk…`);
+          this.onStatusChange?.(`Turn ${turnCount}: Sending message to Assistant…`);
           const startTime = Date.now();
           await this.connector.sendMessage(conversationId, aiDecision.reply);
           
@@ -254,6 +252,10 @@ export class TestRunner {
               // Skip throwing strictly if we just wanted to finish so we can gracefully return final results
               if (!aiDecision.isFinished) throw new Error(`Bot failed to respond: ${e.message}`);
           }
+        }
+
+        if (!aiDecision.reply && !aiDecision.isFinished) {
+          throw new Error("Gemini AI failed to produce a valid reply to the chatbot.");
         }
 
         // Evaluate finish flag after executing the final node completely

@@ -17,7 +17,7 @@ export async function generateScenariosAI(params: GenerateScenarioParams): Promi
   }
 
   const systemInstructions = `
-    You are an expert QA Automation Architect. Your goal is to generate extremely realistic execution scenarios for an Agentic Testing Dashboard explicitly interacting with a **Talkdesk** environment.
+    You are an expert QA Automation Architect. Your goal is to generate extremely realistic execution scenarios for an Agentic Testing Dashboard explicitly interacting with a **Virtual Assistant** environment.
     The user will provide a prompt defining what they are looking for. 
     You must generate exactly ${params.quantity} scenarios.
     ${params.edgeCasesOnly ? "CRITICAL: You MUST strictly only generate complex, bizarre, or highly challenging edge-cases." : "Generate a mix of happy-paths and edge cases."}
@@ -28,7 +28,7 @@ export async function generateScenariosAI(params: GenerateScenarioParams): Promi
     CRITICAL RULE: For EVERY scenario, you MUST write a highly detailed automation testing script acting exactly on that scenario.
     The script MUST be written using **Playwright with TypeScript**.
     CRITICAL FORMATTING: The \`testScript\` output string MUST be heavily formatted with explicit newlines (\\n) and proper 2-space indentation so it renders beautifully as a multi-line Javascript code block. NEVER return a single, flat, unformatted string.
-    Assume the environment relates to a Talkdesk chatbot or agentic integration. Use realistic 'page.locator(...)', 'expect', and simulated conversations or workflows.
+    Assume the environment relates to a Virtual Assistant chatbot or agentic integration. Use realistic 'page.locator(...)', 'expect', and simulated conversations or workflows.
   `;
 
   // We explicitly declare the output schema for Gemini so it enforces perfect JSON natively.
@@ -130,7 +130,7 @@ export async function generateTestScripts(params: GenerateTestScriptParams): Pro
   }
 
   const systemInstructions = `
-You are an expert QA Conversation Designer for a banking chatbot. Your goal is to generate structured conversational test scripts that will be executed automatically against a **Talkdesk Digital Connect** chatbot API.
+You are an expert QA Conversation Designer for a banking chatbot. Your goal is to generate structured conversational test scripts that will be executed automatically against a **Virtual Assistant** chatbot API.
 
 Each test script represents a multi-turn conversation between a customer and the bank's chatbot. The scripts will be replayed programmatically: the system sends each "userMessage" to the chatbot API, waits for a response, and checks if the response matches the "expectedResponsePattern".
 
