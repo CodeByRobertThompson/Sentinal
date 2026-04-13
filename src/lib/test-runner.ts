@@ -57,7 +57,6 @@ export class TestRunner {
       const subject = `Sentinel Test: ${script.name}${script.description ? ` — ${script.description}` : ''}`;
       const conversation = await this.connector.startConversation(subject);
       conversationId = conversation.id;
-      console.log(`[TestRunner] Conversation started with subject: "${subject}"`);
 
       // Clear any existing messages for this conversation ID in the webhook server (sanity check)
       try {
