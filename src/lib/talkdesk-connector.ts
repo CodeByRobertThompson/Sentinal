@@ -216,8 +216,6 @@ export class TalkdeskConnector {
   public async endConversation(conversationId: string): Promise<void> {
     await this.authenticate();
 
-    console.log('[TalkDesk] Ending conversation:', conversationId);
-
     const isVercel = !!(import.meta as any).env.VITE_WEBHOOK_URL;
     const targetEndpoint = `${this.baseUrl}/digital-connect/conversations/${conversationId}`;
 
