@@ -25,7 +25,7 @@ app.post('/api/browser/start', async (req, res) => {
 
   try {
     console.log(`[Playwright] Launching browser to navigate to: ${url}`);
-    const browser = await chromium.launch({ headless: false });
+    const browser = await chromium.launch({ headless: true });
     const context = await browser.newContext({
       viewport: { width: 1280, height: 800 },
       // Optional: Reduce permissions or setup specific state here

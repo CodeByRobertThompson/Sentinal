@@ -181,6 +181,22 @@ export class TestRunner {
         });
       } catch {}
 
+      // Wait for the virtual assistant's proactive intro message before talking
+      this.onStatusChange?.('Waiting for bot greeting…');
+      try {
+        const greeting = await this.connector.awaitBotResponse(conversationId, 15000, 1000);
+        if (greeting) {
+          transcript.push({
+            role: 'bot',
+            content: greeting,
+            timestamp: new Date().toISOString()
+          });
+          this.onTranscriptUpdate?.([...transcript]);
+        }
+      } catch (e) {
+        console.log('[TestRunner] No initial greeting found or timed out. Proceeding.');
+      }
+
       // Dynamic loop
       // Dynamically load gemini generator to avoid circular deps up top
       const { generateDynamicReply } = await import('./gemini-api');
