@@ -90,7 +90,7 @@ interface NestedRunsTableProps {
 }
 
 function NestedRunsTable({ scenario }: NestedRunsTableProps) {
-  const runs = generateMockRuns(scenario);
+  const runs = React.useMemo(() => generateMockRuns(scenario), [scenario]);
   
   return (
     <motion.div
