@@ -5,7 +5,6 @@ import type {
   TestRunResult,
   TranscriptEntry,
 } from '../models/test-script-models';
-import { TalkdeskConnector } from './talkdesk-connector';
 
 /**
  * TestRunner — Orchestrates end-to-end chatbot testing against Talkdesk.
