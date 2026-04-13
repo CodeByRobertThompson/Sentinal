@@ -19,6 +19,7 @@ import { toast } from 'sonner';
 
 import { TestRunner } from '@/lib/test-runner';
 import { createTalkdeskConnector } from '@/lib/talkdesk-connector';
+import { PlaywrightConnector } from '@/lib/playwright-connector';
 import type { TestScript, TestRunResult } from '@/models/test-script-models';
 
 // ─── Sub-Components ──────────────────────────────────────────────
@@ -384,6 +385,9 @@ export function TestRunnerPanel() {
   const [liveTranscript, setLiveTranscript] = useState<any[]>([]);
   const [isRunningAll, setIsRunningAll] = useState(false);
   const [keepAlive, setKeepAlive] = useState(false);
+  
+  const [testEngine, setTestEngine] = useState<'talkdesk' | 'playwright'>('talkdesk');
+  const [mockUrl, setMockUrl] = useState('https://tdde-sedemo.s3.us-east-1.amazonaws.com/Product/WaFd/public_area.html');
 
   // Sync debug state to global window for the Runner to read
   if (typeof window !== 'undefined') {
@@ -427,7 +431,9 @@ export function TestRunnerPanel() {
     setRunningStatus('Initializing…');
 
     try {
-      const connector = createTalkdeskConnector();
+      const connector = testEngine === 'playwright' 
+        ? new PlaywrightConnector(mockUrl) 
+        : createTalkdeskConnector();
       const runner = new TestRunner(connector, {
         onStatusChange: (status) => setRunningStatus(status),
         onStepComplete: (stepIndex) => {
@@ -471,7 +477,7 @@ export function TestRunnerPanel() {
       setRunningProgress(0);
       setLiveTranscript([]);
     }
-  }, []);
+  }, [testEngine, mockUrl]);
 
   const handleRunAll = useCallback(async () => {
     setIsRunningAll(true);
@@ -552,6 +558,32 @@ export function TestRunnerPanel() {
                 </span>
                 <div className="flex items-center gap-2">
                   <div className="flex items-center gap-4 mr-4">
+                    
+                    {/* Engine Toggle */}
+                    <div className="flex items-center gap-2 border-r border-border pr-4">
+                      <Label className="text-[10px] text-muted-foreground uppercase tracking-wider font-bold">Engine</Label>
+                      <select 
+                        value={testEngine} 
+                        onChange={e => setTestEngine(e.target.value as any)}
+                        className="text-xs bg-transparent border-0 font-medium text-slate-blue focus:ring-0 cursor-pointer"
+                      >
+                         <option value="talkdesk">Talkdesk API</option>
+                         <option value="playwright">Mock UI (Playwright)</option>
+                      </select>
+                    </div>
+
+                    {testEngine === 'playwright' && (
+                      <div className="flex items-center gap-2 border-r border-border pr-4 hidden md:flex">
+                        <Label className="text-[10px] text-muted-foreground uppercase tracking-wider font-bold">Target URL</Label>
+                        <input 
+                          type="text" 
+                          value={mockUrl}
+                          onChange={(e) => setMockUrl(e.target.value)}
+                          className="h-6 text-[10px] bg-background border border-border rounded px-2 w-48 font-mono outline-none focus:border-slate-blue"
+                        />
+                      </div>
+                    )}
+
                     <div className="flex items-center gap-2">
                        <Label className="text-[10px] text-muted-foreground uppercase tracking-wider font-bold">Session Cleanup</Label>
                        <Switch 
