@@ -71,8 +71,14 @@ app.post('/api/browser/:id/messages', async (req, res) => {
     const input = chatFrame.locator('textarea[name="text"]');
     await input.fill(content);
     
-    // Pressing enter is the most universal way to send chat messages
-    await input.press('Enter');
+    // Attempt to explicitly click the native "Send message" button to evade newline issues in textareas
+    try {
+      const sendButton = chatFrame.locator('[data-testid="send-message-button"]');
+      await sendButton.click({ timeout: 2000 });
+    } catch (e) {
+      // Fallback
+      await input.press('Enter');
+    }
     
     // Log what we sent so we can filter it out of the transcript if needed
     session.sentMessages.add(content.trim());
