@@ -69,12 +69,16 @@ app.post('/api/browser/:id/messages', async (req, res) => {
     
     const chatFrame = session.page.frameLocator('iframe[src*="index.html"]');
     const input = chatFrame.locator('textarea[name="text"]');
-    await input.fill(content);
+    
+    // Use pressSequentially to simulate real Native human typing.
+    // React chat widgets often ignore .fill() and fail to remove the "disabled" state from the Send Button natively!
+    await input.clear();
+    await input.pressSequentially(content, { delay: 5 });
     
     // Attempt to explicitly click the native "Send message" button to evade newline issues in textareas
     try {
       const sendButton = chatFrame.locator('[data-testid="send-message-button"]');
-      await sendButton.click({ timeout: 2000 });
+      await sendButton.click({ timeout: 2000, force: true });
     } catch (e) {
       // Fallback
       await input.press('Enter');
