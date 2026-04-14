@@ -32,7 +32,10 @@ export class PlaywrightConnector {
 
     const res = await fetch(`${this.baseUrl}/start`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 
+        'Content-Type': 'application/json',
+        'ngrok-skip-browser-warning': 'true' 
+      },
       body: JSON.stringify({ url: this.targetUrl, subject })
     });
 
@@ -62,7 +65,10 @@ export class PlaywrightConnector {
     
     const res = await fetch(`${this.baseUrl}/${conversationId}/messages`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 
+        'Content-Type': 'application/json',
+        'ngrok-skip-browser-warning': 'true'
+      },
       body: JSON.stringify({ content: text })
     });
 
@@ -82,7 +88,12 @@ export class PlaywrightConnector {
   public async endConversation(conversationId: string): Promise<void> {
     console.log('[Playwright] Closing browser session:', conversationId);
 
-    await fetch(`${this.baseUrl}/${conversationId}`, { method: 'DELETE' });
+    await fetch(`${this.baseUrl}/${conversationId}`, { 
+      method: 'DELETE',
+      headers: {
+        'ngrok-skip-browser-warning': 'true'
+      }
+    });
   }
 
   // 5. Await Bot Response (Polls DOM via Playwright server)
@@ -96,7 +107,11 @@ export class PlaywrightConnector {
 
     while (Date.now() - startTime < maxWaitMs) {
       try {
-        const res = await fetch(`${this.baseUrl}/${conversationId}/messages`);
+        const res = await fetch(`${this.baseUrl}/${conversationId}/messages`, {
+          headers: {
+            'ngrok-skip-browser-warning': 'true'
+          }
+        });
         
         if (res.ok) {
           const json = await res.json();
@@ -111,7 +126,11 @@ export class PlaywrightConnector {
               // Wait slightly for delayed 2nd bubbles
               await new Promise(resolve => setTimeout(resolve, 2000));
               
-              const finalRes = await fetch(`${this.baseUrl}/${conversationId}/messages`);
+              const finalRes = await fetch(`${this.baseUrl}/${conversationId}/messages`, {
+                headers: {
+                  'ngrok-skip-browser-warning': 'true'
+                }
+              });
               if (finalRes.ok) {
                 const finalJson = await finalRes.json();
                 const finalMsgs = finalJson.data;
