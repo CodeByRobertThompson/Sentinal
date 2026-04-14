@@ -119,3 +119,31 @@ app.use('/proxy/talkdesk', async (req, res) => {
     res.status(500).json({ error: 'Proxy failed', details: err.message });
   }
 });
+
+// ─── Playwright Headless Browser Proxy ──────────────────────────
+// Permits remote Vercel environments to securely trigger local Playwright scripts
+// over the single available Ngrok tunnel port without mixed-content browser restrictions.
+app.use('/api/browser', async (req, res) => {
+  try {
+    const targetUrl = `http://localhost:3002/api/browser${req.path}`;
+    const options = {
+      method: req.method,
+      headers: { ...req.headers }
+    };
+    
+    // Purge host header so fetch resolves correctly on localhost
+    delete options.headers['host'];
+    
+    if (['POST', 'PUT', 'PATCH'].includes(req.method)) {
+      options.body = req.body && Object.keys(req.body).length > 0 ? JSON.stringify(req.body) : undefined;
+    }
+
+    const response = await fetch(targetUrl, options);
+    const responseText = await response.text();
+    
+    // Attempt standard proxy forwarding, handle Vercel timeout errors gracefully
+    res.status(response.status).send(responseText);
+  } catch (err) {
+    res.status(500).json({ error: 'Playwright Browser Proxy failed', details: err.message });
+  }
+});

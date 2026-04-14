@@ -9,7 +9,11 @@ import type {
  * API calls to our local Playwright Server (running on port 3002).
  */
 export class PlaywrightConnector {
-  private baseUrl = 'http://localhost:3002/api/browser';
+  private get baseUrl(): string {
+    const isVercel = (import.meta as any).env.PROD;
+    const webhookUrl = (import.meta as any).env.VITE_WEBHOOK_URL;
+    return (isVercel && webhookUrl) ? `${webhookUrl}/api/browser` : 'http://localhost:3002/api/browser';
+  }
   private cursor: Record<string, number> = {};
   private targetUrl: string;
 
