@@ -15,11 +15,19 @@ import type {
  */
 export class TalkdeskConnector {
   private get baseUrl(): string {
+    const isVercel = (import.meta as any).env.PROD;
+    if (isVercel) {
+      return 'https://api.talkdeskapp.com';
+    }
     const webhookUrl = (import.meta as any).env.VITE_WEBHOOK_URL;
     return webhookUrl ? `${webhookUrl}/proxy/talkdesk` : '/api/talkdesk';
   }
 
   private get authUrl(): string {
+    const isVercel = (import.meta as any).env.PROD;
+    if (isVercel) {
+      return `https://${this.config.accountName}.talkdeskid.com/oauth/token`;
+    }
     const webhookUrl = (import.meta as any).env.VITE_WEBHOOK_URL;
     return webhookUrl ? `${webhookUrl}/proxy/talkdesk/oauth/token` : '/api/talkdesk-auth/oauth/token';
   }
@@ -39,10 +47,6 @@ export class TalkdeskConnector {
 
   // ─── Authentication ─────────────────────────────────────
 
-  /**
-   * Ensures a valid access token is available.
-   * Skipped entirely if a bearer token was provided at construction.
-   */
   public async authenticate(): Promise<void> {
     if (this.accessToken && this.tokenExpiry && Date.now() < this.tokenExpiry) {
       return;
@@ -60,21 +64,13 @@ export class TalkdeskConnector {
       );
     }
 
-    // Talkdesk OAuth uses HTTP Basic auth: Base64(client_id:client_secret)
     const basicAuth = btoa(`${this.config.clientId}:${this.config.clientSecret}`);
-
-    const body = new URLSearchParams({
-      grant_type: 'client_credentials',
-    });
-
-    // OAuth endpoint is on a SEPARATE domain: {account}.talkdeskid.com
-    const authUrl = this.authUrl;
+    const body = new URLSearchParams({ grant_type: 'client_credentials' });
 
     console.log('[TalkDesk] Authenticating via OAuth...', { account: this.config.accountName });
 
-    // Use the native Vercel Edge proxy to completely blindside Chrome's CORS engine
-    const isVercel = !!(import.meta as any).env.VITE_WEBHOOK_URL;
-    const fetchTarget = isVercel ? '/api/proxy' : authUrl;
+    const isVercel = (import.meta as any).env.PROD;
+    const fetchTarget = isVercel ? '/api/proxy' : this.authUrl;
 
     const res = await fetch(fetchTarget, {
       method: 'POST',
@@ -82,7 +78,7 @@ export class TalkdeskConnector {
         'Content-Type': 'application/x-www-form-urlencoded',
         'Authorization': `Basic ${basicAuth}`,
         'ngrok-skip-browser-warning': 'true',
-        'x-target-url': authUrl 
+        'x-target-url': this.authUrl 
       },
       body: body.toString()
     });
@@ -101,10 +97,6 @@ export class TalkdeskConnector {
 
   // ─── Digital Connect: Conversations ─────────────────────
 
-  /**
-   * POST /digital-connect/conversations
-   * Creates a new conversation linked to the configured touchpoint.
-   */
   public async startConversation(subject?: string): Promise<TalkdeskConversation> {
     await this.authenticate();
 
@@ -119,14 +111,9 @@ export class TalkdeskConnector {
       'x-idempotency-key': idempotencyKey,
     };
 
-    console.log('[TalkDesk] Request headers:', JSON.stringify(headers));
-
-    // Build request body with dynamic subject based on the test scenario
     const requestBody: Record<string, any> = {
       touchpoint_id: this.config.touchpointId,
-      contact_person: {
-        email: 'robert.95tt@gmail.com',
-      },
+      contact_person: { email: 'robert.95tt@gmail.com' },
       context_parameters: {
         contact_name: 'Robert Thompson-Tunstall',
         contact_phone: '+14014414682',
@@ -135,16 +122,15 @@ export class TalkdeskConnector {
       },
     };
 
-    // Add subject if provided — this helps Talkdesk route the conversation
     if (subject) {
       requestBody.subject = subject;
-      console.log('[TalkDesk] Conversation subject:', subject);
     }
 
-    const isVercel = !!(import.meta as any).env.VITE_WEBHOOK_URL;
+    const isVercel = (import.meta as any).env.PROD;
     const targetEndpoint = `${this.baseUrl}/digital-connect/conversations`;
+    const fetchTarget = isVercel ? '/api/proxy' : targetEndpoint;
 
-    const res = await fetch(isVercel ? '/api/proxy' : targetEndpoint, {
+    const res = await fetch(fetchTarget, {
       method: 'POST',
       headers: {
         ...headers,
@@ -160,7 +146,6 @@ export class TalkdeskConnector {
     }
 
     const conversation = await res.json() as TalkdeskConversation;
-    // Wipe the local array cursor for this new session
     if (conversation && conversation.id) {
        this.cursor[conversation.id] = 0;
        this.seenTimestamps[conversation.id] = new Set();
@@ -170,11 +155,6 @@ export class TalkdeskConnector {
 
   // ─── Digital Connect: Messages ──────────────────────────
 
-  /**
-   * POST /digital-connect/conversations/{id}/messages
-   * Sends a customer message into an active conversation.
-   * Returns the conversation_id and message_id on success.
-   */
   public async sendMessage(conversationId: string, text: string): Promise<{ conversation_id: string; message_id: string }> {
     await this.authenticate();
 
@@ -184,10 +164,11 @@ export class TalkdeskConnector {
 
     console.log(`[TalkDesk] Sending message to ${conversationId}: "${text}" (Key: ${idempotencyKey})`);
 
-    const isVercel = !!(import.meta as any).env.VITE_WEBHOOK_URL;
+    const isVercel = (import.meta as any).env.PROD;
     const targetEndpoint = `${this.baseUrl}/digital-connect/conversations/${conversationId}/messages`;
+    const fetchTarget = isVercel ? '/api/proxy' : targetEndpoint;
 
-    const res = await fetch(isVercel ? '/api/proxy' : targetEndpoint, {
+    const res = await fetch(fetchTarget, {
         method: 'POST',
         headers: {
           ...this.buildHeaders() as Record<string, string>,
@@ -209,17 +190,14 @@ export class TalkdeskConnector {
     return data;
   }
 
-  /**
-   * DELETE /digital-connect/conversations/{id}
-   * Ends an active conversation.
-   */
   public async endConversation(conversationId: string): Promise<void> {
     await this.authenticate();
 
-    const isVercel = !!(import.meta as any).env.VITE_WEBHOOK_URL;
+    const isVercel = (import.meta as any).env.PROD;
     const targetEndpoint = `${this.baseUrl}/digital-connect/conversations/${conversationId}`;
+    const fetchTarget = isVercel ? '/api/proxy' : targetEndpoint;
 
-    const res = await fetch(isVercel ? '/api/proxy' : targetEndpoint, {
+    const res = await fetch(fetchTarget, {
       method: 'DELETE',
       headers: {
         ...this.buildHeaders(),
@@ -230,18 +208,11 @@ export class TalkdeskConnector {
     if (!res.ok && res.status !== 204) {
       const err = await res.text();
       console.error('[TalkDesk] End conversation failed:', res.status, err);
-      // We don't necessarily want to throw here if it's already ended or something, 
-      // but logging it is good.
     } else {
       console.log('[TalkDesk] Conversation ended successfully.');
     }
   }
 
-  /**
-   * Polls the local webhook server for the latest bot response.
-   * Talkdesk uses webhooks to deliver bot responses.
-   * Returns the text content of the *first new* bot message correctly.
-   */
   public async awaitBotResponse(
     conversationId: string,
     maxWaitMs = 15000,
@@ -253,10 +224,11 @@ export class TalkdeskConnector {
     while (Date.now() - startTime < maxWaitMs) {
       try {
         const webhookUrl = (import.meta as any).env.VITE_WEBHOOK_URL || 'http://localhost:3001';
-        const isVercel = !!(import.meta as any).env.VITE_WEBHOOK_URL;
+        const isVercel = (import.meta as any).env.PROD;
         const targetEndpoint = `${webhookUrl}/api/messages/${conversationId}`;
+        const fetchTarget = isVercel ? '/api/proxy' : targetEndpoint;
 
-        const res = await fetch(isVercel ? '/api/proxy' : targetEndpoint, {
+        const res = await fetch(fetchTarget, {
           method: 'GET',
           headers: { 
             'ngrok-skip-browser-warning': 'true',
@@ -272,8 +244,6 @@ export class TalkdeskConnector {
             console.log(`[TalkDesk] Webhook Check: Server holds ${messages.length} messages (Cursor: ${cursorIndex})`);
           }
 
-          // Strict Memory Array Indexing — Completely Nullifies Clock Skew!
-          // We solely evaluate messages received *after* our saved array length cursor index.
           const newBotMessages = messages.slice(cursorIndex).filter(
             (m: any) => {
               const senderType = m.sender_type || m.SenderType;
@@ -282,12 +252,9 @@ export class TalkdeskConnector {
           );
 
           if (newBotMessages.length > 0) {
-            // Once we detect the initial webhook packet, Talkdesk might still be typing/processing the next node.
-            // We implement a strategic 2000ms debounce buffer to wait for any trailing packets.
             await new Promise(resolve => setTimeout(resolve, 2000));
             
-            // Perform one final sync with the Webhook Server to pull the absolutized tail end of the sequence.
-            const debounceRes = await fetch(isVercel ? '/api/proxy' : targetEndpoint, {
+            const debounceRes = await fetch(fetchTarget, {
               method: 'GET',
               headers: { 
                 'ngrok-skip-browser-warning': 'true',
@@ -299,7 +266,6 @@ export class TalkdeskConnector {
                const finalJson = await debounceRes.json();
                const finalMsgs = finalJson.data || finalJson;
                
-               // Advance cursor strictly past these new messages indefinitely
                this.cursor[conversationId] = finalMsgs.length;
                
                const finalBotSequence = finalMsgs.slice(cursorIndex).filter(
@@ -308,8 +274,6 @@ export class TalkdeskConnector {
                    const isBot = sType?.toLowerCase() === 'bot';
                    if (!isBot) return false;
                    
-                   // Filter out heavily delayed webhook broadcast duplicates by tracking their native Talkdesk birth timestamps.
-                   // This strictly prevents a "message.delivered" ghost ping arriving 15 seconds late from bleeding into Turn 2.
                    const tstamp = m.created_at || m.Timestamp;
                    if (tstamp && this.seenTimestamps[conversationId]?.has(tstamp)) {
                       return false;
@@ -321,23 +285,18 @@ export class TalkdeskConnector {
                  }
                );
                
-               // Combine all staggered message chunks into one cohesive transcript block.
-               // We heavily dedupe the sequence because Talkdesk often broadcast-spams redundant webhook events
-               // (e.g. message.triggered vs message.created) which creates severe echoing in the transcript.
                const rawContents = finalBotSequence.map((m: any) => (m.content || m.Content || '').trim()).filter(Boolean);
                const uniqueContents = Array.from(new Set(rawContents));
                
                return uniqueContents.join('\n\n');
             }
 
-            // Fallback if final fetch fails
             this.cursor[conversationId] = messages.length;
             const fallbackContents = newBotMessages.map((m: any) => (m.content || m.Content || '').trim()).filter(Boolean);
             return Array.from(new Set(fallbackContents)).join('\n\n');
           }
         }
       } catch (err: any) {
-        // Log gracefully during polling
         console.warn('[TalkDesk] Failed to poll local webhook server (will retry):', err.message);
       }
 
@@ -364,10 +323,6 @@ export class TalkdeskConnector {
 
 // ─── Factory ──────────────────────────────────────────────
 
-/**
- * Creates a TalkdeskConnector pre-configured from environment variables.
- * Usage: const td = createTalkdeskConnector();
- */
 export function createTalkdeskConnector(): TalkdeskConnector {
   const env = (import.meta as any).env;
 
