@@ -30,11 +30,16 @@ export class PlaywrightConnector {
   public async startConversation(subject?: string): Promise<TalkdeskConversation> {
     console.log('[Playwright] Launching UI Test Session using Playwright...', { subject });
 
-    const res = await fetch(`${this.baseUrl}/start`, {
+    const isVercel = (import.meta as any).env.PROD;
+    const targetEndpoint = `${this.baseUrl}/start`;
+    const fetchTarget = isVercel ? '/api/proxy' : targetEndpoint;
+
+    const res = await fetch(fetchTarget, {
       method: 'POST',
       headers: { 
         'Content-Type': 'application/json',
-        'ngrok-skip-browser-warning': 'true' 
+        'ngrok-skip-browser-warning': 'true',
+        'x-target-url': targetEndpoint
       },
       body: JSON.stringify({ url: this.targetUrl, subject })
     });
@@ -63,11 +68,16 @@ export class PlaywrightConnector {
     // In our specific mock website, the first automated chat window interaction 
     // requires closing logic if it has overlays or popups. Our browser server handles that.
     
-    const res = await fetch(`${this.baseUrl}/${conversationId}/messages`, {
+    const isVercel = (import.meta as any).env.PROD;
+    const targetEndpoint = `${this.baseUrl}/${conversationId}/messages`;
+    const fetchTarget = isVercel ? '/api/proxy' : targetEndpoint;
+
+    const res = await fetch(fetchTarget, {
       method: 'POST',
       headers: { 
         'Content-Type': 'application/json',
-        'ngrok-skip-browser-warning': 'true'
+        'ngrok-skip-browser-warning': 'true',
+        'x-target-url': targetEndpoint
       },
       body: JSON.stringify({ content: text })
     });
@@ -88,10 +98,15 @@ export class PlaywrightConnector {
   public async endConversation(conversationId: string): Promise<void> {
     console.log('[Playwright] Closing browser session:', conversationId);
 
-    await fetch(`${this.baseUrl}/${conversationId}`, { 
+    const isVercel = (import.meta as any).env.PROD;
+    const targetEndpoint = `${this.baseUrl}/${conversationId}`;
+    const fetchTarget = isVercel ? '/api/proxy' : targetEndpoint;
+
+    await fetch(fetchTarget, { 
       method: 'DELETE',
       headers: {
-        'ngrok-skip-browser-warning': 'true'
+        'ngrok-skip-browser-warning': 'true',
+        'x-target-url': targetEndpoint
       }
     });
   }
@@ -105,11 +120,16 @@ export class PlaywrightConnector {
     const startTime = Date.now();
     const cursorIndex = this.cursor[conversationId] || 0;
 
+    const isVercel = (import.meta as any).env.PROD;
+    const targetEndpoint = `${this.baseUrl}/${conversationId}/messages`;
+    const fetchTarget = isVercel ? '/api/proxy' : targetEndpoint;
+
     while (Date.now() - startTime < maxWaitMs) {
       try {
-        const res = await fetch(`${this.baseUrl}/${conversationId}/messages`, {
+        const res = await fetch(fetchTarget, {
           headers: {
-            'ngrok-skip-browser-warning': 'true'
+            'ngrok-skip-browser-warning': 'true',
+            'x-target-url': targetEndpoint
           }
         });
         
@@ -126,9 +146,10 @@ export class PlaywrightConnector {
               // Wait slightly for delayed 2nd bubbles
               await new Promise(resolve => setTimeout(resolve, 2000));
               
-              const finalRes = await fetch(`${this.baseUrl}/${conversationId}/messages`, {
+              const finalRes = await fetch(fetchTarget, {
                 headers: {
-                  'ngrok-skip-browser-warning': 'true'
+                  'ngrok-skip-browser-warning': 'true',
+                  'x-target-url': targetEndpoint
                 }
               });
               if (finalRes.ok) {
