@@ -10,8 +10,8 @@ import type {
  */
 export class PlaywrightConnector {
   private get baseUrl(): string {
-    const isVercel = (import.meta as any).env.PROD;
-    const webhookUrl = (import.meta as any).env.VITE_WEBHOOK_URL;
+    const isVercel = process.env.NODE_ENV === 'production';
+    const webhookUrl = process.env.NEXT_PUBLIC_WEBHOOK_URL;
     return (isVercel && webhookUrl) ? `${webhookUrl}/api/browser` : 'http://localhost:3002/api/browser';
   }
   private cursor: Record<string, number> = {};
@@ -30,7 +30,7 @@ export class PlaywrightConnector {
   public async startConversation(subject?: string): Promise<TalkdeskConversation> {
     console.log('[Playwright] Launching UI Test Session using Playwright...', { subject });
 
-    const isVercel = (import.meta as any).env.PROD;
+    const isVercel = process.env.NODE_ENV === 'production';
     const targetEndpoint = `${this.baseUrl}/start`;
     const fetchTarget = isVercel ? '/api/proxy' : targetEndpoint;
 
@@ -68,7 +68,7 @@ export class PlaywrightConnector {
     // In our specific mock website, the first automated chat window interaction 
     // requires closing logic if it has overlays or popups. Our browser server handles that.
     
-    const isVercel = (import.meta as any).env.PROD;
+    const isVercel = process.env.NODE_ENV === 'production';
     const targetEndpoint = `${this.baseUrl}/${conversationId}/messages`;
     const fetchTarget = isVercel ? '/api/proxy' : targetEndpoint;
 
@@ -98,7 +98,7 @@ export class PlaywrightConnector {
   public async endConversation(conversationId: string): Promise<void> {
     console.log('[Playwright] Closing browser session:', conversationId);
 
-    const isVercel = (import.meta as any).env.PROD;
+    const isVercel = process.env.NODE_ENV === 'production';
     const targetEndpoint = `${this.baseUrl}/${conversationId}`;
     const fetchTarget = isVercel ? '/api/proxy' : targetEndpoint;
 
@@ -120,7 +120,7 @@ export class PlaywrightConnector {
     const startTime = Date.now();
     const cursorIndex = this.cursor[conversationId] || 0;
 
-    const isVercel = (import.meta as any).env.PROD;
+    const isVercel = process.env.NODE_ENV === 'production';
     const targetEndpoint = `${this.baseUrl}/${conversationId}/messages`;
     const fetchTarget = isVercel ? '/api/proxy' : targetEndpoint;
 

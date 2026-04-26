@@ -165,8 +165,8 @@ export class TestRunner {
       conversationId = conversation.id;
       
       try {
-        const isVercel = !!(import.meta as any).env.VITE_WEBHOOK_URL;
-        const webhookUrl = (import.meta as any).env.VITE_WEBHOOK_URL || 'http://localhost:3001';
+        const webhookUrl = process.env.NEXT_PUBLIC_WEBHOOK_URL || 'http://localhost:3001';
+        const isVercel = process.env.NODE_ENV === 'production';
         const targetEndpoint = `${webhookUrl}/api/messages/${conversationId}`;
 
         await fetch(isVercel ? '/api/proxy' : targetEndpoint, { 

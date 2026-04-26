@@ -15,20 +15,20 @@ import type {
  */
 export class TalkdeskConnector {
   private get baseUrl(): string {
-    const isVercel = (import.meta as any).env.PROD;
+    const isVercel = process.env.NODE_ENV === 'production';
     if (isVercel) {
       return 'https://api.talkdeskapp.com';
     }
-    const webhookUrl = (import.meta as any).env.VITE_WEBHOOK_URL;
+    const webhookUrl = process.env.NEXT_PUBLIC_WEBHOOK_URL;
     return webhookUrl ? `${webhookUrl}/proxy/talkdesk` : '/api/talkdesk';
   }
 
   private get authUrl(): string {
-    const isVercel = (import.meta as any).env.PROD;
+    const isVercel = process.env.NODE_ENV === 'production';
     if (isVercel) {
       return `https://${this.config.accountName}.talkdeskid.com/oauth/token`;
     }
-    const webhookUrl = (import.meta as any).env.VITE_WEBHOOK_URL;
+    const webhookUrl = process.env.NEXT_PUBLIC_WEBHOOK_URL;
     return webhookUrl ? `${webhookUrl}/proxy/talkdesk/oauth/token` : '/api/talkdesk-auth/oauth/token';
   }
 
@@ -69,7 +69,7 @@ export class TalkdeskConnector {
 
     console.log('[TalkDesk] Authenticating via OAuth...', { account: this.config.accountName });
 
-    const isVercel = (import.meta as any).env.PROD;
+    const isVercel = process.env.NODE_ENV === 'production';
     const fetchTarget = isVercel ? '/api/proxy' : this.authUrl;
 
     const res = await fetch(fetchTarget, {
@@ -126,7 +126,7 @@ export class TalkdeskConnector {
       requestBody.subject = subject;
     }
 
-    const isVercel = (import.meta as any).env.PROD;
+    const isVercel = process.env.NODE_ENV === 'production';
     const targetEndpoint = `${this.baseUrl}/digital-connect/conversations`;
     const fetchTarget = isVercel ? '/api/proxy' : targetEndpoint;
 
@@ -164,7 +164,7 @@ export class TalkdeskConnector {
 
     console.log(`[TalkDesk] Sending message to ${conversationId}: "${text}" (Key: ${idempotencyKey})`);
 
-    const isVercel = (import.meta as any).env.PROD;
+    const isVercel = process.env.NODE_ENV === 'production';
     const targetEndpoint = `${this.baseUrl}/digital-connect/conversations/${conversationId}/messages`;
     const fetchTarget = isVercel ? '/api/proxy' : targetEndpoint;
 
@@ -193,7 +193,7 @@ export class TalkdeskConnector {
   public async endConversation(conversationId: string): Promise<void> {
     await this.authenticate();
 
-    const isVercel = (import.meta as any).env.PROD;
+    const isVercel = process.env.NODE_ENV === 'production';
     const targetEndpoint = `${this.baseUrl}/digital-connect/conversations/${conversationId}`;
     const fetchTarget = isVercel ? '/api/proxy' : targetEndpoint;
 
@@ -223,8 +223,8 @@ export class TalkdeskConnector {
 
     while (Date.now() - startTime < maxWaitMs) {
       try {
-        const webhookUrl = (import.meta as any).env.VITE_WEBHOOK_URL || 'http://localhost:3001';
-        const isVercel = (import.meta as any).env.PROD;
+        const webhookUrl = process.env.NEXT_PUBLIC_WEBHOOK_URL || 'http://localhost:3001';
+        const isVercel = process.env.NODE_ENV === 'production';
         const targetEndpoint = `${webhookUrl}/api/messages/${conversationId}`;
         const fetchTarget = isVercel ? '/api/proxy' : targetEndpoint;
 
@@ -324,13 +324,11 @@ export class TalkdeskConnector {
 // ─── Factory ──────────────────────────────────────────────
 
 export function createTalkdeskConnector(): TalkdeskConnector {
-  const env = (import.meta as any).env;
-
   return new TalkdeskConnector({
-    bearerToken: env.VITE_TALKDESK_BEARER_TOKEN || undefined,
-    clientId: env.VITE_TALKDESK_CLIENT_ID || undefined,
-    clientSecret: env.VITE_TALKDESK_CLIENT_SECRET || undefined,
-    accountName: env.VITE_TALKDESK_ACCOUNT_NAME || '',
-    touchpointId: env.VITE_TALKDESK_TOUCHPOINT_ID || ''
+    bearerToken: process.env.NEXT_PUBLIC_TALKDESK_BEARER_TOKEN || undefined,
+    clientId: process.env.NEXT_PUBLIC_TALKDESK_CLIENT_ID || undefined,
+    clientSecret: process.env.NEXT_PUBLIC_TALKDESK_CLIENT_SECRET || undefined,
+    accountName: process.env.NEXT_PUBLIC_TALKDESK_ACCOUNT_NAME || '',
+    touchpointId: process.env.NEXT_PUBLIC_TALKDESK_TOUCHPOINT_ID || ''
   });
 }

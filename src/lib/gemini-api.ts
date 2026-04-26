@@ -1,8 +1,8 @@
 import type { Scenario } from '@/generated/models/scenario-model';
 import type { TestScript } from '@/models/test-script-models';
 
-// Use the local Vite env variable logic
-const GEMINI_API_KEY = (import.meta as any).env.VITE_GEMINI_API_KEY;
+// Use the local Next.js env variable logic
+const GEMINI_API_KEY = process.env.NEXT_PUBLIC_GEMINI_API_KEY;
 const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`;
 
 export interface GenerateScenarioParams {
@@ -12,9 +12,9 @@ export interface GenerateScenarioParams {
 }
 
 export async function generateScenariosAI(params: GenerateScenarioParams): Promise<Scenario[]> {
-  if (!GEMINI_API_KEY) {
-    throw new Error('VITE_GEMINI_API_KEY is not defined in your .env.local file.');
-  }
+    if (!GEMINI_API_KEY) {
+      throw new Error('NEXT_PUBLIC_GEMINI_API_KEY is not defined in your environment variables.');
+    }
 
   const systemInstructions = `
     You are an expert QA Automation Architect. Your goal is to generate extremely realistic execution scenarios for an Agentic Testing Dashboard explicitly interacting with a **Virtual Assistant** environment.
@@ -125,9 +125,9 @@ export interface GenerateTestScriptParams {
  * turns that get played against the live chatbot.
  */
 export async function generateTestScripts(params: GenerateTestScriptParams): Promise<TestScript[]> {
-  if (!GEMINI_API_KEY) {
-    throw new Error('VITE_GEMINI_API_KEY is not defined in your .env.local file.');
-  }
+    if (!GEMINI_API_KEY) {
+      throw new Error('NEXT_PUBLIC_GEMINI_API_KEY is not defined in your environment variables.');
+    }
 
   const systemInstructions = `
 You are an expert QA Conversation Designer for a banking chatbot. Your goal is to generate structured conversational test scripts that will be executed automatically against a **Virtual Assistant** chatbot API.
@@ -245,9 +245,9 @@ export interface GenerateDynamicReplyParams {
 }
 
 export async function generateDynamicReply(params: GenerateDynamicReplyParams): Promise<{ reply: string, isFinished: boolean, passResult: 'pass' | 'fail' | 'pending' }> {
-  if (!GEMINI_API_KEY) {
-    throw new Error('VITE_GEMINI_API_KEY is not defined in your .env.local file.');
-  }
+    if (!GEMINI_API_KEY) {
+      throw new Error('NEXT_PUBLIC_GEMINI_API_KEY is not defined in your environment variables.');
+    }
 
   const systemInstructions = `
 You are an expert QA Conversation Agent acting as a human customer. Your goal is to carry out an overarching 'Objective' by interacting dynamically with a bank chatbot.
